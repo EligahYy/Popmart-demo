@@ -12,12 +12,18 @@ const staticDir =
 
 const app = buildApp({ signingSecret, aliasesPath, logger: true, staticDir });
 
-app
-  .listen({ port, host })
-  .then(() => {
-    app.log.info(`import server listening on http://${host}:${port}`);
-  })
-  .catch((error: unknown) => {
-    app.log.error(error);
-    process.exit(1);
-  });
+// 关键：导出 Fastify 实例，供 Vercel 生成 Serverless Function
+export default app;
+
+// 本地开发时依然可以监听端口
+if (process.env.NODE_ENV !== 'production') {
+  app
+    .listen({ port, host })
+    .then(() => {
+      app.log.info(`import server listening on http://${host}:${port}`);
+    })
+    .catch((error: unknown) => {
+      app.log.error(error);
+      process.exit(1);
+    });
+}
