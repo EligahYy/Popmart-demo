@@ -1,0 +1,44 @@
+[
+  {
+    "region": "ca",
+    "spuId": "9120",
+    "title": "Twinkle Twinkle Live the Ordinary Series Figures",
+    "ipName": "Twinkle Twinkle",
+    "aliases": [
+      "好好生活",
+      "星星人 好好生活",
+      "星星人好好生活",
+      "live the ordinary",
+      "twinkle twinkle live the ordinary"
+    ],
+    "source": "用户分享链接 + 官方商品页核对",
+    "verifiedAt": "2026-10-30"
+  },
+  {
+    "region": "ca",
+    "spuId": "3114",
+    "title": "CRYBABY Crying For Love Series Figures",
+    "ipName": "CRYBABY",
+    "aliases": ["crying for love", "crybaby crying for love", "爱神的眼泪", "爱神之泪"],
+    "source": "官方商品页核对",
+    "verifiedAt": "2026-10-30"
+  },
+  {
+    "region": "ca",
+    "spuId": "3392",
+    "title": "Nyota Growing up by Your Way Series Figures",
+    "ipName": "Nyota",
+    "aliases": ["growing up by your way", "nyota growing up"],
+    "source": "官方商品页核对",
+    "verifiedAt": "2026-10-30"
+  },
+  {
+    "region": "ca",
+    "spuId": "3036",
+    "title": "CRYBABY Wild but Cutie Series - Vinyl Plush Pendant Blind Box",
+    "ipName": "CRYBABY",
+    "aliases": ["wild but cutie", "crybaby wild but cutie"],
+    "source": "官方商品页核对",
+    "verifiedAt": "2026-10-30"
+  }
+]

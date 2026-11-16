@@ -1,0 +1,25 @@
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log
+.vite/
+playwright-report/
+test-results/
+
+# 本地 Node 运行时（体积大，不提交）
+tools/
+
+
+# 个人素材：不进版本库
+assets/**
+!assets/README.md
+
+# 个人形象生成素材：不进版本库
+我我我_副本/
+.pnpm-store/

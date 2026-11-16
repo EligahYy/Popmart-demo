@@ -1,0 +1,21 @@
+{
+  "name": "my-popmart",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.28.5",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @my-popmart/web dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "start": "pnpm --filter @my-popmart/web build && pnpm --filter @my-popmart/import-server start",
+    "preview:lan": "pnpm --filter @my-popmart/web preview --host 0.0.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  }
+}

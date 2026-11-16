@@ -1,0 +1,149 @@
+import { useEffect, useState } from 'react';
+import { NavLink, Route, Routes } from 'react-router-dom';
+import { RuntimeProvider, useRuntime } from './app/RuntimeProvider.js';
+import { ErrorBoundary } from './app/ErrorBoundary.js';
+import { AddPanel } from './features/add/AddPanel.js';
+import { CollectionPage } from './features/collection/CollectionPage.js';
+import { HomePage } from './features/home/HomePage.js';
+import { LedgerPage } from './features/ledger/LedgerPage.js';
+import { SettingsPage } from './features/settings/SettingsPage.js';
+import { applyUpdate } from './app/pwa.js';
+
+function NotFoundPage() {
+  return (
+    <main className="page">
+      <h1 className="page__title">页面不存在</h1>
+      <p className="page__hint">请返回小窝。</p>
+    </main>
+  );
+}
+
+function Shell() {
+  const [addOpen, setAddOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [updateReady, setUpdateReady] = useState(false);
+  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+
+  useEffect(() => {
+    function goOnline() {
+      setOnline(true);
+    }
+    function goOffline() {
+      setOnline(false);
+    }
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    function onNeedRefresh() {
+      setUpdateReady(true);
+    }
+    function onOfflineReady() {
+      setToast('应用已可离线打开');
+    }
+    window.addEventListener('pwa:need-refresh', onNeedRefresh);
+    window.addEventListener('pwa:offline-ready', onOfflineReady);
+    return () => {
+      window.removeEventListener('pwa:need-refresh', onNeedRefresh);
+      window.removeEventListener('pwa:offline-ready', onOfflineReady);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  return (
+    <>
+      <Routes>
+        <Route
+          path="/"
+          element={<HomePage refreshKey={refreshKey} />}
+        />
+        <Route path="/ip/:ipId" element={<CollectionPage />} />
+        <Route path="/ledger" element={<LedgerPage refreshKey={refreshKey} />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+
+      <nav className="tabbar" aria-label="主导航">
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) => `tabbar__link${isActive ? ' tabbar__link--active' : ''}`}
+        >
+          我的小窝
+        </NavLink>
+        <button
+          type="button"
+          className="tabbar__add"
+          onClick={() => setAddOpen(true)}
+          aria-label="欢迎新宝宝"
+        >
+          ＋
+        </button>
+        <NavLink
+          to="/ledger"
+          className={({ isActive }) => `tabbar__link${isActive ? ' tabbar__link--active' : ''}`}
+        >
+          捂一下钱包？
+        </NavLink>
+      </nav>
+
+      {!online ? (
+        <div className="offline-banner" role="status">
+          当前离线：已保存的数据仍可查看，导入新系列需要联网
+        </div>
+      ) : null}
+
+      {updateReady ? (
+        <div className="update-banner" role="alert">
+          <span>新版本已就绪</span>
+          <button type="button" className="link-button" onClick={() => void applyUpdate()}>
+            立即更新
+          </button>
+          <button type="button" className="icon-button" aria-label="稍后更新" onClick={() => setUpdateReady(false)}>
+            ✕
+          </button>
+        </div>
+      ) : null}
+
+      {toast ? (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      ) : null}
+
+      {addOpen ? (
+        <AddPanel
+          onClose={() => setAddOpen(false)}
+          refreshKey={refreshKey}
+          onSaved={(message) => {
+            setRefreshKey((value) => value + 1);
+            setToast(message);
+          }}
+          onToast={(message) => setToast(message)}
+        />
+      ) : null}
+
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <RuntimeProvider>
+        <Shell />
+      </RuntimeProvider>
+    </ErrorBoundary>
+  );
+}

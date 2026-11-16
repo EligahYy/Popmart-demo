@@ -1,0 +1,63 @@
+/*
+ * 视觉主题层（占位）
+ *
+ * 这里的所有变量都是「中性占位」，不是最终配色。
+ * 拿到用户的视觉参考图后，只需改本文件，不必动组件与布局。
+ * 变量含义与替换方法见 docs/visual-theme.md。
+ */
+
+:root {
+  /* 基础色：背景、卡片、文字、描边 */
+  --color-bg: #f6e6e9;
+  --color-surface: #fffaf7;
+  --color-surface-soft: #fdf1f3;
+  --color-text: #4a3a3d;
+  --color-muted: #8d7478;
+  --color-border: #ecd3d9;
+  --color-accent: #c97084;
+  --color-accent-strong: #b45c72;
+  --color-on-accent: #fffaf7;
+  --color-sage: #a9b884;
+  --color-lavender: #aaa4d4;
+  --color-butter: #e8c86a;
+
+  /* 状态色：预算提醒与危险操作，必须同时有文字说明 */
+  --color-warning: #d29a3c;
+  --color-danger: #b85757;
+  --color-danger-soft: #fbecec;
+  --color-danger-border: #f0cccc;
+  --color-offline: #9a6a3a;
+
+  /* 圆角与阴影 */
+  --radius-card: 26px;
+  --radius-sheet: 30px;
+  --radius-pill: 999px;
+  --shadow-card: 0 8px 22px rgb(122 78 88 / 14%);
+  --shadow-sheet: 0 -10px 40px rgb(90 50 60 / 18%);
+  --shadow-overlay: 0 20px 60px rgb(90 50 60 / 26%);
+
+  /* 间距与排版 */
+  --space-page: 20px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
+  --font-size-title: 30px;
+  --font-size-body: 15px;
+  --font-size-meta: 12px;
+  --line-height-body: 1.6;
+
+  /* 首页：个人背景与遮罩 */
+  --home-scrim-top: rgb(246 230 233 / 30%);
+  --home-scrim-mid: rgb(246 230 233 / 78%);
+  --home-scrim-bottom: rgb(246 230 233 / 96%);
+
+  /* 动效 */
+  --motion-float-duration: 7s;
+  --motion-card-duration: 120ms;
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}

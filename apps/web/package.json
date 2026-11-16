@@ -1,0 +1,51 @@
+{
+  "name": "@my-popmart/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "node scripts/smoke.mjs",
+    "e2e": "node scripts/e2e-import.mjs",
+    "e2e:multi": "node scripts/e2e-multi.mjs",
+    "e2e:collection": "node scripts/e2e-collection.mjs",
+    "e2e:ledger": "node scripts/e2e-ledger.mjs",
+    "e2e:ledger-edit": "node scripts/e2e-ledger-edit.mjs",
+    "e2e:offline": "node scripts/e2e-offline.mjs",
+    "e2e:backup": "node scripts/e2e-backup.mjs",
+    "e2e:personal": "node scripts/e2e-personal.mjs",
+    "e2e:refund-multi": "node scripts/e2e-refund-multi.mjs",
+    "e2e:ac": "node scripts/e2e-ac.mjs",
+    "e2e:device-prep": "node scripts/e2e-device-prep.mjs",
+    "e2e:sheets": "node scripts/e2e-sheets.mjs",
+    "e2e:visual": "node scripts/visual-check.mjs",
+    "e2e:home-scene": "node scripts/e2e-home-scene.mjs",
+    "e2e:greeting": "node scripts/e2e-greeting-video.mjs"
+  },
+  "dependencies": {
+    "@my-popmart/contracts": "workspace:*",
+    "date-fns": "^4.4.0",
+    "dexie": "^4.4.7",
+    "fflate": "^0.8.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.5",
+    "workbox-window": "^7.4.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "fake-indexeddb": "^6.2.8",
+    "playwright-core": "^1.65.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.8",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^4.1.12"
+  }
+}
