@@ -30,7 +30,7 @@ export function IdentityCard({
   onClose: () => void;
   onTransferred?: () => void;
 }) {
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const cardRef = useRef<HTMLElement | null>(null);
   const [data, setData] = useState<IdentityCardData | null>(null);
   const [flipped, setFlipped] = useState(false);
@@ -49,7 +49,7 @@ export function IdentityCard({
     return () => {
       cancelled = true;
     };
-  }, [db, datasetId, styleId]);
+  }, [db, datasetId, sharedVersion, styleId]);
 
   useLayoutEffect(() => {
     const el = cardRef.current;
@@ -283,7 +283,7 @@ function TransferSheet({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const [lines, setLines] = useState<TransferableLine[] | null>(null);
   const [lineId, setLineId] = useState('');
   const [kind, setKind] = useState<'give_away' | 'sold'>('give_away');
@@ -302,7 +302,7 @@ function TransferSheet({
     return () => {
       cancelled = true;
     };
-  }, [db, datasetId, styleId]);
+  }, [db, datasetId, sharedVersion, styleId]);
 
   const selected = lines?.find((line) => line.lineId === lineId) ?? null;
   const held = selected?.held ?? 0;

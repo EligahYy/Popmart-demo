@@ -44,7 +44,7 @@ export function AcquisitionSheet({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const [detail, setDetail] = useState<AcquisitionDetail | null>(null);
   const [mode, setMode] = useState<'view' | 'edit' | 'refund' | 'delete'>('view');
   const [busy, setBusy] = useState(false);
@@ -74,8 +74,9 @@ export function AcquisitionSheet({
   }
 
   useEffect(() => {
-    void reload();
-  }, [db, datasetId, acquisitionId]);
+    // Refresh read-only details, but keep an edit's expected revision and draft.
+    if (mode === 'view') void reload();
+  }, [db, datasetId, sharedVersion, acquisitionId, mode]);
 
   function startEdit(value: AcquisitionDetail) {
     setMode('edit');

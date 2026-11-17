@@ -21,11 +21,36 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!runtime?.db.shared) return;
+    const { db } = runtime;
+    const update = (event: Event) => {
+      const { datasetId } = (event as CustomEvent<{ datasetId: string }>).detail;
+      setRuntime((previous) => previous ? { ...previous, datasetId, sharedVersion: (previous.sharedVersion ?? 0) + 1 } : previous);
+    };
+    const refresh = () => {
+      if (document.visibilityState === 'hidden') return;
+      void db.shared?.refresh().then(() => {
+        window.dispatchEvent(new CustomEvent('shared:connection', { detail: true }));
+      }).catch(() => {
+        window.dispatchEvent(new CustomEvent('shared:connection', { detail: false }));
+      });
+    };
+    window.addEventListener('shared:data', update);
+    window.addEventListener('focus', refresh);
+    const interval = window.setInterval(refresh, 5000);
+    return () => {
+      window.removeEventListener('shared:data', update);
+      window.removeEventListener('focus', refresh);
+      window.clearInterval(interval);
+    };
+  }, [runtime?.db]);
+
   if (error) {
     return (
       <div className="boot">
         <p>{error}</p>
-        <p className="page__hint">请检查浏览器是否允许本机存储后重试。</p>
+        <button type="button" className="button" onClick={() => window.location.reload()}>重新连接</button>
       </div>
     );
   }

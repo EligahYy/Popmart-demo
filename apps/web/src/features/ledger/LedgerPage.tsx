@@ -47,7 +47,7 @@ const BUDGET_COPY: Record<BudgetLevel, { amount: string; qty: string }> = {
 };
 
 export function LedgerPage({ refreshKey }: { refreshKey: number }) {
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const today = toLocalCalendarDay(new Date());
   const [records, setRecords] = useState<LedgerRecord[] | null>(null);
   const [ips, setIps] = useState<Array<{ id: string; name: string }>>([]);
@@ -73,7 +73,7 @@ export function LedgerPage({ refreshKey }: { refreshKey: number }) {
     return () => {
       cancelled = true;
     };
-  }, [db, datasetId, refreshKey, version]);
+  }, [db, datasetId, sharedVersion, refreshKey, version]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,7 +83,7 @@ export function LedgerPage({ refreshKey }: { refreshKey: number }) {
     return () => {
       cancelled = true;
     };
-  }, [db, datasetId, currentMonth, refreshKey]);
+  }, [db, datasetId, sharedVersion, currentMonth, refreshKey]);
 
   const firstYear = useMemo(() => firstRecordYear(records ?? []), [records]);
   const firstBoundaryDay = useMemo(() => firstBoundary(records ?? []), [records]);

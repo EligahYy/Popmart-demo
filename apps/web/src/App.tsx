@@ -19,11 +19,19 @@ function NotFoundPage() {
 }
 
 function Shell() {
+  const { db } = useRuntime();
+  const [sharedConnected, setSharedConnected] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [updateReady, setUpdateReady] = useState(false);
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+
+  useEffect(() => {
+    const connection = (event: Event) => setSharedConnected((event as CustomEvent<boolean>).detail);
+    window.addEventListener('shared:connection', connection);
+    return () => window.removeEventListener('shared:connection', connection);
+  }, []);
 
   useEffect(() => {
     function goOnline() {
@@ -63,6 +71,11 @@ function Shell() {
 
   return (
     <>
+      {db.shared ? (
+        <div className="shared-banner" role="status">
+          {sharedConnected ? '共享展示空间 · 修改会对所有访客可见' : '共享空间暂时断开 · 正在重连，保存修改需要联网'}
+        </div>
+      ) : null}
       <Routes>
         <Route
           path="/"
@@ -100,7 +113,7 @@ function Shell() {
 
       {!online ? (
         <div className="offline-banner" role="status">
-          当前离线：已保存的数据仍可查看，导入新系列需要联网
+          {db.shared ? '当前离线：已加载内容仍可查看，保存修改需要联网' : '当前离线：已保存的数据仍可查看，导入新系列需要联网'}
         </div>
       ) : null}
 

@@ -30,6 +30,7 @@ function backupFilename(now: Date): string {
  * 事务外做哈希与压缩，避免长时间占用事务。
  */
 export async function createBackup(db: PopmartDb, datasetId: string): Promise<BackupResult> {
+  if (db.shared) await db.shared.hydrateMedia();
   const scope = [...BACKUP_TABLES.map((table) => db.table(table)), db.mediaBlobs];
   const snapshot = await db.transaction('r', scope, async () => {
     const data: Record<string, unknown[]> = {};

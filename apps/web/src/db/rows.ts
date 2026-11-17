@@ -1,4 +1,5 @@
 import type { Cents, AcquisitionDate, YearMonth } from '@my-popmart/contracts';
+import type { SharedMedia } from '@my-popmart/contracts';
 
 export interface RowBase {
   readonly datasetId: string;
@@ -18,6 +19,7 @@ export interface DatasetRow {
 }
 
 export interface AppMetaRow {
+  sharedCache?: { instanceId: string; revision: number; media: SharedMedia[] };
   readonly id: 'control';
   activeDatasetId: string;
   readonly dbSchemaVersion: number;

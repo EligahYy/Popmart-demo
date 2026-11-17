@@ -161,6 +161,8 @@ export async function createAcquisition(
   db: PopmartDb,
   input: CreateAcquisitionInput,
 ): Promise<CreateAcquisitionResult> {
+  if (db.shared) return db.shared.command('createAcquisition', input);
+
   assertDraft(input);
 
   const payloadHash = hashPayload({
@@ -426,6 +428,8 @@ export async function commitSeriesImport(
   db: PopmartDb,
   input: CommitSeriesImportInput,
 ): Promise<CommitSeriesImportResult> {
+  if (db.shared) return db.shared.command('commitSeriesImport', input);
+
   const preview = input.preview;
   if (preview.previewVersion !== 2) {
     throw new CommandError('INVALID_DRAFT', '导入预览版本不受支持');
@@ -666,6 +670,8 @@ export interface SetBudgetResult {
 
 /** 设置某月额度：同时写入当月快照与后续生效规则，不改历史月份。 */
 export async function setBudget(db: PopmartDb, input: SetBudgetInput): Promise<SetBudgetResult> {
+  if (db.shared) return db.shared.command('setBudget', input);
+
   const hasAmount = input.amountLimitCents !== null;
   const hasQuantity = input.quantityLimit !== null;
 
@@ -847,6 +853,8 @@ export async function updateAcquisition(
   db: PopmartDb,
   input: UpdateAcquisitionInput,
 ): Promise<{ acquisitionId: string; revision: number; replayed: boolean }> {
+  if (db.shared) return db.shared.command('updateAcquisition', input);
+
   const payloadHash = hashPayload({ id: input.acquisitionId, patch: input.patch });
 
   return db.transaction(
@@ -1027,6 +1035,8 @@ export async function deleteAcquisition(
   db: PopmartDb,
   input: { commandId: string; datasetId: string; acquisitionId: string },
 ): Promise<{ acquisitionId: string; replayed: boolean }> {
+  if (db.shared) return db.shared.command('deleteAcquisition', input);
+
   const payloadHash = hashPayload({ id: input.acquisitionId });
 
   return db.transaction(
@@ -1140,6 +1150,8 @@ export async function createRefund(
   db: PopmartDb,
   input: CreateRefundInput,
 ): Promise<{ refundId: string; replayed: boolean }> {
+  if (db.shared) return db.shared.command('createRefund', input);
+
   const payloadHash = hashPayload(input);
   const sum = input.lines.reduce((total, line) => total + line.refundCents, 0);
   if (sum !== input.totalCents) {
@@ -1263,6 +1275,8 @@ export async function createTransfer(
   db: PopmartDb,
   input: CreateTransferInput,
 ): Promise<{ transferId: string; replayed: boolean }> {
+  if (db.shared) return db.shared.command('createTransfer', input);
+
   const payloadHash = hashPayload(input);
 
   return db.transaction(
@@ -1364,6 +1378,8 @@ export async function updateCollectionProfile(
   db: PopmartDb,
   input: UpdateProfileInput,
 ): Promise<{ styleId: string; collectionNo: string; replayed: boolean }> {
+  if (db.shared) return db.shared.command('updateCollectionProfile', input);
+
   if ((input.nickname ?? '').length > 30) {
     throw new CommandError('INVALID_DRAFT', '小名最多 30 个字符');
   }
@@ -1465,6 +1481,8 @@ export async function setSpaceName(
   db: PopmartDb,
   input: SetSpaceNameInput,
 ): Promise<{ name: string; replayed: boolean }> {
+  if (db.shared) return db.shared.command('setSpaceName', input);
+
   const name = input.name.trim();
   if (name.length === 0) throw new CommandError('INVALID_DRAFT', '名称不能为空');
   if (name.length > 12) throw new CommandError('INVALID_DRAFT', '名称最多 12 个字符');

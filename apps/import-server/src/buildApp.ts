@@ -3,6 +3,8 @@ import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { ImportError, PARSER_VERSION, createPopmartProvider } from './providers/popmart.js';
+import { createNeonStore, type SharedStore } from './shared/store.js';
+import { registerSharedRoutes } from './shared/routes.js';
 
 export interface BuildAppOptions {
   readonly signingSecret?: string;
@@ -11,6 +13,8 @@ export interface BuildAppOptions {
   readonly now?: () => number;
   readonly logger?: boolean;
   readonly staticDir?: string;
+  readonly sharedStore?: SharedStore;
+  readonly dataMode?: 'local' | 'shared';
 }
 
 const resolveBody = z.object({ input: z.string().min(1).max(2048) });
@@ -54,6 +58,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     routerOptions: { maxParamLength: 4096 },
   });
   const signingSecret = options.signingSecret ?? 'dev-secret-change-me';
+  const databaseUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? process.env.NEON_DATABASE_URL;
+  const store = options.sharedStore ?? (databaseUrl ? createNeonStore(databaseUrl, process.env.SHARED_SPACE_ID ?? 'public') : undefined);
+  registerSharedRoutes(app, store, options.dataMode ?? (process.env.DATA_MODE === 'local' ? 'local' : 'shared'));
   const provider = createPopmartProvider({
     signingSecret,
     ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),

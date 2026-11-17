@@ -9,7 +9,7 @@ import { Cloud, Flower, Shelf } from './Decor.js';
 import { GreetingPlayer } from './GreetingPlayer.js';
 
 export function HomePage({ refreshKey }: { refreshKey: number }) {
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const [views, setViews] = useState<OwnedIpView[] | null>(null);
   const [spaceName, setSpaceName] = useState('红彤彤收纳');
   const [greeting, setGreeting] = useState(false);
@@ -34,7 +34,7 @@ export function HomePage({ refreshKey }: { refreshKey: number }) {
     return () => {
       cancelled = true;
     };
-  }, [db, datasetId, refreshKey]);
+  }, [db, datasetId, sharedVersion, refreshKey]);
 
   useEffect(() => {
     if (!greeting) return;

@@ -42,7 +42,7 @@ export function AddPanel({
   initialSeriesId?: string | null;
   refreshKey?: number;
 }) {
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const [views, setViews] = useState<SeriesView[] | null>(null);
   const [activeSeriesId, setActiveSeriesId] = useState<string | null>(initialSeriesId ?? null);
   const [picked, setPicked] = useState<Map<string, number>>(new Map());
@@ -68,7 +68,7 @@ export function AddPanel({
       if (current && next.some((view) => view.series.id === current)) return current;
       return next[0]?.series.id ?? null;
     });
-  }, [db, datasetId]);
+  }, [db, datasetId, sharedVersion]);
 
   useEffect(() => {
     void reload();

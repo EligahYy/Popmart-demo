@@ -17,7 +17,7 @@ const MAX_DRAG = 36;
 
 export function CollectionPage() {
   const { ipId } = useParams();
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const [ip, setIp] = useState<IpRow | null>(null);
   const [series, setSeries] = useState<OwnedSeriesView[] | null>(null);
   const [openStyleId, setOpenStyleId] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export function CollectionPage() {
     ]);
     setIp(ipRow ?? null);
     setSeries(seriesRows);
-  }, [db, datasetId, ipId]);
+  }, [db, datasetId, sharedVersion, ipId]);
 
   useEffect(() => {
     void load();

@@ -9,7 +9,7 @@ export function useStyleImage(
   imageUrl: string | null,
   assetId: string | null | undefined,
 ): string | null {
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const [url, setUrl] = useState<string | null>(imageUrl);
 
   useEffect(() => {
@@ -23,13 +23,15 @@ export function useStyleImage(
 
     db.mediaBlobs
       .get([datasetId, assetId])
-      .then((row) => {
+      .then(async (row) => {
         if (cancelled) return;
-        if (!row) {
+        const blob = row?.blob ?? (db.shared ? await db.shared.readMedia(assetId) : null);
+        if (cancelled) return;
+        if (!blob) {
           setUrl(imageUrl);
           return;
         }
-        objectUrl = URL.createObjectURL(row.blob);
+        objectUrl = URL.createObjectURL(blob);
         setUrl(objectUrl);
       })
       .catch(() => {
@@ -40,7 +42,7 @@ export function useStyleImage(
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [db, datasetId, assetId, imageUrl]);
+  }, [db, datasetId, sharedVersion, assetId, imageUrl]);
 
   return url;
 }

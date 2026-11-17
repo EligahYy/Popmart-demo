@@ -181,6 +181,20 @@ export async function restoreBackup(
     throw new BackupError('REFERENCE_BROKEN', problems.slice(0, 5).join('；'));
   }
 
+  if (db.shared) {
+    for (const [id, bytes] of inspection.media) {
+      const asset = (inspection.data.assets ?? []).find((item) => (item as { hash?: string }).hash === id) as { mime?: string } | undefined;
+      const blob = new Blob([bytes as unknown as BlobPart], { type: asset?.mime ?? 'application/octet-stream' });
+      const uploaded = await db.shared.upload(blob);
+      if (uploaded.id !== id) throw new BackupError('HASH_MISMATCH', '备份素材哈希不一致');
+    }
+    const meta = await db.appMeta.get('control');
+    return db.shared.command('restoreBackup', {
+      datasetId: meta?.activeDatasetId, manifest: inspection.manifest, data: inspection.data,
+      media: [...inspection.media.keys()],
+    });
+  }
+
   const stagingId = crypto.randomUUID();
   const timestamp = nowIso();
   const tables = BACKUP_TABLES.map((name) => db.table(name));

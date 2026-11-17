@@ -8,11 +8,10 @@ export interface PersonalMedia {
 }
 
 /**
- * 读取本机个人素材并生成 object URL；没有素材时返回 null。
- * 素材只存 IndexedDB，不联网。
+ * 优先读取本机缓存；共享模式下按需读取云端素材。
  */
 export function usePersonalMedia(role: PersonalRole, refreshKey = 0): PersonalMedia | null {
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const [media, setMedia] = useState<PersonalMedia | null>(null);
 
   useEffect(() => {
@@ -36,7 +35,7 @@ export function usePersonalMedia(role: PersonalRole, refreshKey = 0): PersonalMe
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [db, datasetId, role, refreshKey]);
+  }, [db, datasetId, sharedVersion, role, refreshKey]);
 
   return media;
 }

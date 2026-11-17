@@ -1,4 +1,5 @@
-import Dexie, { type Table } from 'dexie';
+import Dexie, { type DexieOptions, type Table } from 'dexie';
+import type { SharedCommand, SharedMedia } from '@my-popmart/contracts';
 import type {
   AcquisitionLineRow,
   AcquisitionRow,
@@ -24,7 +25,16 @@ import type {
 export const DB_NAME = 'my-popmart';
 export const DB_SCHEMA_VERSION = 1;
 
+export interface SharedAccess {
+  command<T>(name: SharedCommand, payload: unknown): Promise<T>;
+  refresh(): Promise<void>;
+  upload(blob: Blob): Promise<SharedMedia>;
+  readMedia(id: string): Promise<Blob | null>;
+  hydrateMedia(): Promise<void>;
+}
+
 export class PopmartDb extends Dexie {
+  shared?: SharedAccess;
   datasets!: Table<DatasetRow, string>;
   appMeta!: Table<AppMetaRow, string>;
   ips!: Table<IpRow, [string, string]>;
@@ -45,8 +55,8 @@ export class PopmartDb extends Dexie {
   commandResults!: Table<CommandResultRow, [string, string]>;
   counters!: Table<CounterRow, [string, string]>;
 
-  constructor(name = DB_NAME) {
-    super(name);
+  constructor(name = DB_NAME, options?: DexieOptions) {
+    super(name, options);
     this.version(DB_SCHEMA_VERSION).stores({
       datasets: 'id, status',
       appMeta: 'id',

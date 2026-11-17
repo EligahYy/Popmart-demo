@@ -23,7 +23,7 @@ function ownerId(role: PersonalRole): string {
 }
 
 /**
- * 个人素材只在本机保存，不上传服务器。
+ * 共享模式上传云端；本机模式只写入浏览器。
  * idle：首页常态形象（图片或循环视频）；greeting：点击时播放一次的打招呼视频。
  */
 export async function savePersonalAsset(
@@ -38,6 +38,11 @@ export async function savePersonalAsset(
   if (role === 'greeting' && !isVideo) throw new Error('打招呼素材需要视频');
   if (isVideo && file.size > MAX_VIDEO_BYTES) throw new Error('视频超过 30MB');
   if (isImage && file.size > MAX_IMAGE_BYTES) throw new Error('图片超过 10MB');
+
+  if (db.shared) {
+    const uploaded = await db.shared.upload(file);
+    return db.shared.command('savePersonalAsset', { datasetId, hash: uploaded.id, mime: file.type, role });
+  }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const hash = await sha256Hex(bytes);
@@ -105,6 +110,7 @@ export async function clearPersonalAssets(
   datasetId: string,
   role: PersonalRole = 'idle',
 ): Promise<void> {
+  if (db.shared) return db.shared.command('clearPersonalAssets', { datasetId, role });
   const assets = await db.assets
     .where('[datasetId+ownerType+ownerId]')
     .equals([datasetId, 'personal', ownerId(role)])
@@ -123,5 +129,5 @@ export async function readPersonalBlob(
   assetId: string,
 ): Promise<Blob | null> {
   const row = await db.mediaBlobs.get([datasetId, assetId]);
-  return row?.blob ?? null;
+  return row?.blob ?? (db.shared ? db.shared.readMedia(assetId) : null);
 }

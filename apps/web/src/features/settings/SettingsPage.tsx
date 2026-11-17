@@ -18,7 +18,7 @@ import {
 } from '../../media/personal.js';
 
 export function SettingsPage() {
-  const { db, datasetId } = useRuntime();
+  const { db, datasetId, sharedVersion } = useRuntime();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [pending, setPending] = useState<BackupInspection | null>(null);
@@ -47,7 +47,7 @@ export function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [db, datasetId]);
+  }, [db, datasetId, sharedVersion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +82,7 @@ export function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [db, datasetId, personalVersion]);
+  }, [db, datasetId, sharedVersion, personalVersion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,7 +112,7 @@ export function SettingsPage() {
       cancelled = true;
       for (const url of urls) URL.revokeObjectURL(url);
     };
-  }, [db, datasetId, personalVersion]);
+  }, [db, datasetId, sharedVersion, personalVersion]);
 
   async function uploadPersonal(file: File | undefined, role: PersonalRole = 'idle') {
     if (!file) return;
@@ -124,7 +124,7 @@ export function SettingsPage() {
         if (poster) await savePersonalAsset(db, datasetId, poster, 'greetingPoster');
       }
       setPersonalVersion((value) => value + 1);
-      setStatus(role === 'greeting' ? '打招呼视频已保存到本机。' : '首页形象已保存到本机。');
+      setStatus(`${role === 'greeting' ? '打招呼视频' : '首页形象'}已保存到${db.shared ? '共享空间' : '本机'}。`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : '保存失败');
     } finally {
@@ -225,6 +225,13 @@ export function SettingsPage() {
     <main className="page">
       <h1 className="page__title">设置</h1>
 
+      {db.shared ? (
+        <section className="settings-block">
+          <h2 className="settings-block__title">云端共享空间</h2>
+          <p className="page__hint">所有访客查看同一份收藏、账本、预算和形象素材。修改会同步给其他访客，已打开的页面约 5 秒更新一次。</p>
+        </section>
+      ) : null}
+
       <section className="settings-block">
         <h2 className="settings-block__title">安装到主屏幕</h2>
         <p className="page__hint">
@@ -244,7 +251,7 @@ export function SettingsPage() {
 
       <section className="settings-block">
         <h2 className="settings-block__title">版本与更新</h2>
-        <p className="page__hint">当前版本：2026-11-13 00:20（闪屏修复）</p>
+        <p className="page__hint">当前版本：{db.shared ? '云端共享版' : '本机存储版'}</p>
         <button
           type="button"
           className="button button--ghost"
@@ -319,7 +326,7 @@ export function SettingsPage() {
         ) : (
           <>
             <p className="page__hint">
-              只保存在本机，不上传服务器。可以选一张图片，或一段静音循环视频；没有设置时首页显示占位。
+              {db.shared ? '上传后保存到共享空间，所有访客都能看到。' : '只保存在本机，不上传服务器。'}可以选一张图片，或一段静音循环视频；没有设置时首页显示占位。
             </p>
             {personalPreview ? (
               <div className="personal-preview">
@@ -413,7 +420,7 @@ export function SettingsPage() {
       <section className="settings-block">
         <h2 className="settings-block__title">备份与恢复</h2>
         <p className="page__hint">
-          备份包含图库、收藏、账本、预算与已保存图片。文件由你保存到「文件」等位置，不会上传。
+          备份包含图库、收藏、账本、预算与已保存图片。{db.shared ? '导出文件保存到你的设备；恢复备份会替换所有访客看到的共享数据。' : '文件由你保存到「文件」等位置，不会上传。'}
         </p>
         <button type="button" className="button" disabled={busy} onClick={exportBackup}>
           {busy ? '处理中…' : '导出备份'}
@@ -444,7 +451,7 @@ export function SettingsPage() {
           </li>
           <li className="order-lines__row">
             <span>版本</span>
-            <span>2026-11-13 00:20</span>
+            <span>{db.shared ? '云端共享版' : '本机存储版'}</span>
           </li>
           <li className="order-lines__row">
             <span>已缓存图片</span>
@@ -468,7 +475,7 @@ export function SettingsPage() {
         <Sheet title="恢复备份" onClose={() => setPending(null)}>
           <div className="stack">
             <p className="notice notice--error">
-              恢复会替换当前全部数据，且不会合并。建议先导出当前备份。
+              {db.shared ? '恢复会替换所有访客看到的云端共享数据，且不会合并。建议先导出当前备份。' : '恢复会替换当前全部数据，且不会合并。建议先导出当前备份。'}
             </p>
             <ul className="order-lines">
               <li className="order-lines__row">

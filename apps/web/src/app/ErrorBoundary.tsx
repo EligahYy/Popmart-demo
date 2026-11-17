@@ -4,7 +4,7 @@ interface State {
   error: Error | null;
 }
 
-/** 任何渲染异常都不应变成白屏；数据仍在本机，刷新即可继续。 */
+/** 渲染错误不清空数据，提供重新加载入口。 */
 export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   override state: State = { error: null };
 
@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
         <div className="boot">
           <h1 className="page__title">页面出了点问题</h1>
           <p className="page__hint">
-            你的收藏与账本仍保存在本机，没有被删除。可以重新加载继续使用。
+            此页面错误不会清空已保存的收藏与账本。可以重新加载继续使用。
           </p>
           <button type="button" className="button" onClick={() => window.location.reload()}>
             重新加载

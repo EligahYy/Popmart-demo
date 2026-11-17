@@ -1,6 +1,6 @@
 # my popmart
 
-私人盲盒收藏与消费记录 PWA。产品规则见 [PRD](my-popmart-PRD.md)，技术方案见[技术设计与开发实施文档](my-popmart-技术设计与开发实施文档.md)，导入可行性见 [docs/import-feasibility.md](docs/import-feasibility.md)。
+盲盒收藏与消费记录 PWA，支持 Vercel + Neon 云端共享展示。产品规则见 [PRD](my-popmart-PRD.md)，技术方案见[技术设计与开发实施文档](my-popmart-技术设计与开发实施文档.md)，导入可行性见 [docs/import-feasibility.md](docs/import-feasibility.md)。
 
 ## 功能总览
 
@@ -9,8 +9,10 @@
 - **添加 / 导入**：内联导入（输入系列名称英文或粘贴链接）、自定义系列、按行填写订单（来源 / 日期 / 金额）
 - **账本「捂一下钱包？」**：周 / 月 / 年三档时间维度 + 顶部 IP 筛选 tab、点选单位与明细联动、明细两级折叠（年 → 月 → 款式）、月度预算（金额 / 数量）
 - **身份卡**：收藏编号、小名、收藏故事、获取记录、转让
-- **设置**：备份 / 还原、个人形象与打招呼视频（仅存本机）、PWA 安装指引、版本号
-- 数据全程本机（IndexedDB），不上传；导入服务无状态
+- **设置**：备份 / 还原、共享形象与打招呼视频、PWA 安装指引、版本号
+- 默认云端共享：收藏、账本、预算、空间名称、图片与视频保存在 Neon；所有访客的修改彼此可见，已打开的页面约 5 秒更新一次。浏览器 IndexedDB 作为查询与媒体缓存。
+- 首次建库为空，不生成演示数据；由站点所有者通过实际操作录入。设置 `DATA_MODE=local` 可使用原本机模式。
+- Vercel 接入步骤、共享范围和旧数据迁移见 [部署说明](docs/deploy.md)。
 
 ## 交付说明
 
@@ -28,7 +30,7 @@ apps/web/                 React + Vite 客户端
   src/domain/             业务纯函数（价格、库存、预算）
   src/db/                 Dexie schema 与命令层
   src/styles/             设计 token（正式配色待用户参考图确定）
-apps/import-server/       公开资料导入服务（Fastify）
+apps/import-server/       导入与云端共享数据服务（Fastify）
   src/providers/          POP MART 页面适配器与 fixture
   data/aliases.zh.json    人工核验的中文别名（有限覆盖）
 packages/contracts/       金额、日期精度、分摊、导入 DTO
@@ -61,6 +63,7 @@ pnpm build            # 生产构建
 pnpm --filter @my-popmart/import-server start   # 导入服务（8787）
 pnpm --filter @my-popmart/web smoke             # 浏览器冒烟（需两个服务在跑）
 pnpm --filter @my-popmart/web e2e               # 导入→购买→收藏架 全链路（需两个服务在跑）
+pnpm --filter @my-popmart/import-server e2e:shared # 构建后验证双浏览器共享（自动启动测试服务，不使用生产库）
 pnpm start                                      # 构建前端 + 单进程启动（8787，静态 + API）
 ```
 
@@ -74,7 +77,7 @@ pnpm start                                      # 构建前端 + 单进程启动
 - **命令层**：`createAcquisition` 在单一事务内写订单、明细、收藏编号、命令结果；
   同一 `commandId` 重复提交返回原结果，不同 payload 拒绝；维护模式阻止写入。
 
-测试覆盖技术文档 T01–T05、T11、T13–T17 及边界用例，当前 122 个用例通过。
+测试覆盖技术文档 T01–T05、T11、T13–T17 及边界用例，以及 Neon SQL、跨客户端共享、并发冲突、媒体分片和备份恢复。执行 `pnpm test` 验证。
 
 ## 导入服务
 
@@ -130,7 +133,7 @@ GET  /api/health
 
 ## 安全与隐私
 
-个人数据只在本机；服务端不接收订单与素材。响应头、依赖审计与存储边界见
+默认共享模式由服务端保存数据到 Neon；所有访客均可查看和修改。原本机模式的存储边界仍适用。响应头、依赖审计与存储边界见
 [docs/security.md](docs/security.md)。
 
 ## 视觉主题
@@ -141,7 +144,7 @@ GET  /api/health
 
 ## 个人化
 
-- 个人形象与打招呼视频只存本机（IndexedDB），不上传、不打包；首页未设置时显示占位
+- 共享模式的个人形象与打招呼视频上传到 Neon，浏览器缓存媒体；本机模式仍只保存于 IndexedDB；首页未设置时显示占位
 - 首页为场景化布局：左侧盲盒收纳柜、右侧个人形象，中间渐变过渡
 - 每次应用重新初始化时，从该 IP 已拥有款式图片中轮换封面（同会话稳定）
 - 可在身份卡编辑小名与收藏故事
