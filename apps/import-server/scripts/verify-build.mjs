@@ -1,15 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, copyFileSync, writeFileSync, symlinkSync, rmSync } from 'node:fs';
+import { mkdtempSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 // Reproduce Vercel's flattened layout: no parent package.json, source files,
 // or data directory. Use the actual emitted artifact and native Node loader.
 const directory = mkdtempSync(join(tmpdir(), 'popmart-deployment-'));
 try {
   copyFileSync(new URL('../dist/server.mjs', import.meta.url), join(directory, 'server.mjs'));
-  symlinkSync(fileURLToPath(new URL('../node_modules', import.meta.url)), join(directory, 'node_modules'), 'dir');
   writeFileSync(join(directory, 'check.mjs'), `
 import assert from 'node:assert/strict';
 import { Server } from 'node:http';
@@ -20,7 +18,7 @@ const original = Server.prototype.listen;
 let captured;
 Server.prototype.listen = function () { captured = this; Server.prototype.listen = original; return this; };
 try {
-  await import('./server.mjs');
+  await import(process.argv[2]);
   const end = Date.now() + 1500;
   while (!captured && Date.now() < end) await new Promise(resolve => setTimeout(resolve, 10));
   assert.ok(captured, 'Vercel must capture a server during import');
@@ -39,5 +37,12 @@ try {
 `);
   const env = { ...process.env, NODE_ENV: 'production', VERCEL: '1' };
   for (const key of ['DATABASE_URL', 'POSTGRES_URL', 'NEON_DATABASE_URL']) delete env[key];
-  execFileSync(process.execPath, ['--no-experimental-require-module', join(directory, 'check.mjs')], { env, stdio: 'inherit', timeout: 15000 });
+  const check = (entry) => execFileSync(process.execPath, [
+    '--no-experimental-require-module', '--no-experimental-detect-module',
+    join(directory, 'check.mjs'), entry,
+  ], { env, stdio: 'inherit', timeout: 15000 });
+  check('./server.mjs');
+  copyFileSync(new URL('../dist/server.mjs', import.meta.url), join(directory, 'server.js'));
+  copyFileSync(new URL('../dist/package.json', import.meta.url), join(directory, 'package.json'));
+  check('./server.js');
 } finally { rmSync(directory, { recursive: true, force: true }); }

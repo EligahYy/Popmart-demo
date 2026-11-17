@@ -7,7 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "test": "vitest run",
-    "test:deployment": "node scripts/verify-build.mjs",
+    "test:deployment": "node scripts/verify-build.mjs && node scripts/verify-cloud-build.mjs",
     "e2e:shared": "tsx ../web/scripts/e2e-shared.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit && node scripts/build.mjs"
