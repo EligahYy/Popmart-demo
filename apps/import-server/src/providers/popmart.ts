@@ -38,7 +38,7 @@ const USER_AGENT =
 const PRODUCT_PATH = /^\/([a-z]{2})\/products\/(\d+)(?:\/|$)/;
 const COLLECTION_PATH = /^\/([a-z]{2})\/collection\/(\d+)(?:\/|$)/;
 
-interface AliasEntry {
+export interface AliasEntry {
   readonly region: string;
   readonly spuId: string;
   readonly title: string;
@@ -56,6 +56,7 @@ export interface ProviderOptions {
   readonly maxHtmlBytes?: number;
   readonly maxMediaBytes?: number;
   readonly aliasesPath?: string;
+  readonly aliases?: readonly AliasEntry[];
   readonly sitemapTtlMs?: number;
 }
 
@@ -215,6 +216,7 @@ export function createPopmartProvider(options: ProviderOptions): PopmartProvider
 
   function loadAliases(): AliasEntry[] {
     if (aliases) return aliases;
+    if (options.aliases) return aliases = [...options.aliases];
     if (!options.aliasesPath) {
       aliases = [];
       return aliases;

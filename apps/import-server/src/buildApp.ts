@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { ImportError, PARSER_VERSION, createPopmartProvider } from './providers/popmart.js';
+import { ImportError, PARSER_VERSION, createPopmartProvider, type AliasEntry } from './providers/popmart.js';
 import { createNeonStore, type SharedStore } from './shared/store.js';
 import { registerSharedRoutes } from './shared/routes.js';
 
@@ -10,6 +10,7 @@ export interface BuildAppOptions {
   readonly signingSecret?: string;
   readonly fetchImpl?: typeof fetch;
   readonly aliasesPath?: string;
+  readonly aliases?: readonly AliasEntry[];
   readonly now?: () => number;
   readonly logger?: boolean;
   readonly staticDir?: string;
@@ -63,6 +64,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   registerSharedRoutes(app, store, options.dataMode ?? (process.env.DATA_MODE === 'local' ? 'local' : 'shared'));
   const provider = createPopmartProvider({
     signingSecret,
+    ...(options.aliases ? { aliases: options.aliases } : {}),
     ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
     ...(options.aliasesPath ? { aliasesPath: options.aliasesPath } : {}),
     ...(options.now ? { now: options.now } : {}),

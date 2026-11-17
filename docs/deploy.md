@@ -39,10 +39,12 @@ pnpm --filter @my-popmart/import-server start
 Root Directory 应指向仓库根目录，使该配置和 pnpm workspace 都参与构建。
 `/api/*` 先转发到 `import-server`，保留原路径；其余请求交给 `web`。
 
-- 入口源文件是 `apps/import-server/src/server.ts`；`pnpm build` 先类型检查，再将 workspace 代码打包为 `dist/server.js`，Vercel 从该 JavaScript 产物启动。生产环境同样调用 `listen()`。
+- 入口源文件是 `apps/import-server/src/server.ts`；`pnpm build` 先类型检查，再将 workspace 代码打包为 `dist/server.mjs`，Vercel 从该 JavaScript 产物启动。生产环境同样调用 `listen()`。
   Vercel 的 Node 运行时会拦截该调用，获取 HTTP server。
+  产物使用 `.mjs`，即使平台将输出目录扁平化且没有父目录 package.json，也会按 ESM 加载；每次构建先清空 dist，防止旧 `.js` 入口残留。
+  `pnpm --filter @my-popmart/import-server test:deployment` 在无源码和 package.json 的临时目录中验证真实产物启动与搜索别名。
 - Fastify 工厂放在 `src/buildApp.ts`，避免被自动发现逻辑误选为应用入口。
-  构建产物包含 Fastify import，服务配置的 `outputDirectory: dist` 明确指定该产物；别名 JSON 用 `includeFiles` 包含。
+  构建产物包含 Fastify import，服务配置的 `outputDirectory: dist` 明确指定该产物；搜索别名 JSON 静态打包进产物，不依赖部署目录结构。
 - 在 Vercel 项目中设置固定的 `IMPORT_SIGNING_SECRET`，至少覆盖实际使用的
   Production / Preview 环境。服务需要访问官方商品页、sitemap 和图片 CDN。
 - `@fastify/static` 固定为 `8.3.0`（兼容 Fastify 5），并提交 pnpm lockfile。
