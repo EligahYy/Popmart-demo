@@ -121,6 +121,7 @@ export function IdentityCard({
                     assetId={data.style.imageAssetId}
                     alt={data.style.displayName}
                     loading="eager"
+                    width="original"
                   />
                 </div>
                 <h3 className="identity__name">{data.style.displayName}</h3>

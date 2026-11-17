@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { dayDate, type SeriesPreview } from '@my-popmart/contracts';
 import { createDatabase, openDatabase, type PopmartDb } from './database.js';
 import { commitSeriesImport, createAcquisition, initializeDatabase, putStyleForTest } from './commands.js';
@@ -42,10 +42,36 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await db.delete();
 });
 
 describe('commitSeriesImport', () => {
+  it('orders imports and reimports by commit order even when timestamps tie or the clock moves backwards', async () => {
+    const clock = vi.spyOn(Date.prototype, 'toISOString').mockReturnValue('2026-11-17T00:00:00.000Z');
+    const importPreview = (preview: SeriesPreview) => commitSeriesImport(db, {
+      commandId: crypto.randomUUID(), datasetId, preview,
+      seriesReferenceUnitCents: null, priceProvenance: null,
+    });
+    const first = await importPreview(makePreview());
+    const secondPreview = { ...makePreview(), canonicalKey: 'popmart:ca:9121', name: 'Second Series' };
+    const second = await importPreview(secondPreview);
+    expect((await getSeriesViews(db, datasetId)).map(view => view.series.id)).toEqual([second.seriesId, first.seriesId]);
+    // Restored data can already carry a high order number.
+    await db.series.update([datasetId, second.seriesId], { importOrder: 100 });
+    clock.mockReturnValue('2026-11-16T00:00:00.000Z');
+    await importPreview(makePreview());
+    const views = await getSeriesViews(db, datasetId);
+    expect(views.map(view => view.series.id)).toEqual([first.seriesId, second.seriesId]);
+    expect(views[0]?.series.importOrder).toBe(101);
+    // Existing records without the optional order still follow their import dates.
+    for (const view of views) {
+      const { importOrder: _order, ...legacy } = view.series;
+      await db.series.put(legacy);
+    }
+    expect((await getSeriesViews(db, datasetId))[0]?.series.id).toBe(second.seriesId);
+  });
+
   it('creates ip, series and styles on first import', async () => {
     const result = await commitSeriesImport(db, {
       commandId: crypto.randomUUID(),

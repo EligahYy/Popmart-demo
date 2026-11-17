@@ -121,6 +121,38 @@ describe('import API', () => {
 });
 
 describe('image proxy', () => {
+  it.each(['384', '768'])('requests a %spx WebP and caches it at the CDN', async (width) => {
+    const fetchImpl = vi.fn(async (_input: string | URL | Request) => new Response(new Uint8Array([1, 2]), {
+      headers: { 'content-type': 'image/webp' },
+    }));
+    const app = buildApp({ signingSecret: 'test-secret', fetchImpl, aliasesPath });
+    try {
+      const src = encodeURIComponent('https://prod-global-biz.popmart.com/x.jpg?keep=1');
+      const response = await app.inject(`/api/import/image?src=${src}&w=${width}`);
+      expect(response.statusCode).toBe(200);
+      const upstream = new URL(String(fetchImpl.mock.calls[0]?.[0]));
+      expect(upstream.searchParams.get('x-oss-process')).toBe(`image/resize,w_${width},limit_1/quality,q_80/format,webp`);
+      expect(upstream.searchParams.get('keep')).toBe('1');
+      expect(response.headers['cache-control']).toContain('immutable');
+      expect(response.headers['vercel-cdn-cache-control']).toContain('max-age=604800');
+    } finally { await app.close(); }
+  });
+
+  it('leaves originals untouched and rejects unsupported thumbnail sizes', async () => {
+    const fetchImpl = vi.fn(async (_input: string | URL | Request) => new Response(new Uint8Array([1]), {
+      headers: { 'content-type': 'image/jpeg' },
+    }));
+    const app = buildApp({ signingSecret: 'test-secret', fetchImpl, aliasesPath });
+    try {
+      const original = 'https://prod-global-biz.popmart.com/original.jpg';
+      const src = encodeURIComponent(original);
+      expect((await app.inject(`/api/import/image?src=${src}`)).statusCode).toBe(200);
+      expect(fetchImpl.mock.calls[0]?.[0]).toBe(original);
+      expect((await app.inject(`/api/import/image?src=${src}&w=99999`)).statusCode).toBe(400);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    } finally { await app.close(); }
+  });
+
   it('returns image bytes from an allowlisted host', async () => {
     const imageBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
     const app = buildApp({

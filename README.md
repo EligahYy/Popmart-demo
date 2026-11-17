@@ -126,7 +126,8 @@ GET  /api/health
 
 ## 离线与 PWA
 
-- 导入后自动把款式图缓存进 IndexedDB（经 `/api/import/image` 同源代理，主机白名单校验）
+- 款式列表按需加载 384px WebP 缩略图，身份卡展示原图；原图地址始终保留（经 `/api/import/image` 同源代理，主机白名单校验，仅支持 OSS 的官方 CDN 启用缩放）
+- 已展示的图片复用浏览器与 Vercel CDN 缓存，不在导入时同时下载整套原图；设置页仍可补缓存原图到 IndexedDB 用于离线与完整备份
 - 界面优先使用本机 Blob，未缓存时回退远程地址
 - 生产构建生成 `manifest.webmanifest`、`sw.js`，应用外壳可离线打开
 - 设置页可补缓存图片、重新显示安装指引

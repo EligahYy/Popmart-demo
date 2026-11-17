@@ -71,7 +71,7 @@ export interface PopmartProvider {
   search(query: string): Promise<SeriesCandidate[]>;
   preview(candidateId: string): Promise<SeriesPreview>;
   media(token: string): Promise<MediaResult>;
-  imageByUrl(rawUrl: string): Promise<MediaResult>;
+  imageByUrl(rawUrl: string, width?: 384 | 768): Promise<MediaResult>;
 }
 
 function normalizeText(value: string): string {
@@ -234,6 +234,7 @@ export function createPopmartProvider(options: ProviderOptions): PopmartProvider
     rawUrl: string,
     accept: string,
     limitBytes: number,
+    guard: (url: string) => URL = assertWebUrl,
   ): Promise<{ body: Uint8Array; contentType: string; finalUrl: string }> {
     let current = rawUrl;
     for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
@@ -257,7 +258,7 @@ export function createPopmartProvider(options: ProviderOptions): PopmartProvider
           }
           current = new URL(location, current).toString();
           // 每一跳都重新过白名单
-          assertWebUrl(current);
+          guard(current);
           continue;
         }
 
@@ -534,14 +535,14 @@ export function createPopmartProvider(options: ProviderOptions): PopmartProvider
       throw new ImportError('TOKEN_INVALID', '媒体链接已过期', true);
     }
     const url = assertMediaUrl(payload.u);
-    const result = await requestFollow(url.toString(), 'image/*', maxMediaBytes);
+    const result = await requestFollow(url.toString(), 'image/*', maxMediaBytes, assertMediaUrl);
     if (!result.contentType.startsWith('image/')) {
       throw new ImportError('MEDIA_UNAVAILABLE', '来源返回的不是图片', false);
     }
     return { bytes: result.body, contentType: result.contentType };
   }
 
-  async function imageByUrl(rawUrl: string): Promise<MediaResult> {
+  async function imageByUrl(rawUrl: string, width?: 384 | 768): Promise<MediaResult> {
     let url: URL;
     try {
       url = assertMediaUrl(rawUrl);
@@ -552,7 +553,12 @@ export function createPopmartProvider(options: ProviderOptions): PopmartProvider
         false,
       );
     }
-    const result = await requestFollow(url.toString(), 'image/*', maxMediaBytes);
+    // This official CDN is backed by OSS and supports image processing. Keep
+    // other allowlisted CDNs unchanged rather than assuming their URL dialect.
+    if (width && url.hostname === 'prod-global-biz.popmart.com') {
+      url.searchParams.set('x-oss-process', `image/resize,w_${width},limit_1/quality,q_80/format,webp`);
+    }
+    const result = await requestFollow(url.toString(), 'image/*', maxMediaBytes, assertMediaUrl);
     if (!result.contentType.startsWith('image/')) {
       throw new ImportError('MEDIA_UNAVAILABLE', '来源返回的不是图片', false);
     }

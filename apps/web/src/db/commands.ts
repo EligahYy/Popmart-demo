@@ -504,10 +504,9 @@ export async function commitSeriesImport(
         ip = updated;
       }
 
-      let series = await db.series
-        .where('[datasetId+canonicalKey]')
-        .equals([input.datasetId, preview.canonicalKey])
-        .first();
+      const seriesRows = await db.series.where({ datasetId: input.datasetId }).toArray();
+      const importOrder = seriesRows.reduce((highest, row) => Math.max(highest, row.importOrder ?? 0), 0) + 1;
+      let series = seriesRows.find((row) => row.canonicalKey === preview.canonicalKey);
 
       const priceFields =
         input.seriesReferenceUnitCents !== null
@@ -527,6 +526,7 @@ export async function commitSeriesImport(
           revision: 1,
           ipId: ip.id,
           canonicalKey: preview.canonicalKey,
+          importOrder,
           displayName: preview.name,
           aliases: [],
           productKind: preview.productKind,
@@ -543,6 +543,7 @@ export async function commitSeriesImport(
       } else {
         const updated: SeriesRow = {
           ...series,
+          importOrder,
           ipId: ip.id,
           displayName: preview.name,
           productKind: preview.productKind,

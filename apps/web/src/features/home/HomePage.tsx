@@ -172,6 +172,7 @@ export function HomePage({ refreshKey }: { refreshKey: number }) {
                     assetId={covers.get(view.ip.id)?.assetId ?? view.coverAssetId}
                     alt={view.ip.displayName}
                     placeholder="暂无图片"
+                    width={768}
                   />
                   <span className="ip-card__count">{view.heldTotal}</span>
                 </div>

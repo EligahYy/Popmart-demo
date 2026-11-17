@@ -119,9 +119,11 @@ export async function getSeriesViews(
       };
     })
     .sort((left, right) => {
+      const order = (right.series.importOrder ?? 0) - (left.series.importOrder ?? 0);
+      if (order !== 0) return order;
       const leftTime = left.series.importedAt ?? left.series.createdAt;
       const rightTime = right.series.importedAt ?? right.series.createdAt;
-      return rightTime.localeCompare(leftTime);
+      return rightTime.localeCompare(leftTime) || right.series.createdAt.localeCompare(left.series.createdAt) || left.series.id.localeCompare(right.series.id);
     });
 }
 

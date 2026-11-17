@@ -3348,3 +3348,12 @@ button {
   line-height: 1.5;
   text-align: center;
 }
+
+.add-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.add-section-heading .add-section-title { margin: 0; }
+.add-section-heading .field__hint { margin: 0; }

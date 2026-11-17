@@ -21,7 +21,10 @@ export interface BuildAppOptions {
 const resolveBody = z.object({ input: z.string().min(1).max(2048) });
 const searchBody = z.object({ query: z.string().min(1).max(200) });
 const previewBody = z.object({ candidateId: z.string().min(10).max(8192) });
-const imageQuery = z.object({ src: z.string().min(1).max(2048) });
+const imageQuery = z.object({
+  src: z.string().min(1).max(2048),
+  w: z.enum(['384', '768']).optional(),
+});
 
 function sendError(reply: FastifyReply, error: unknown): FastifyReply {
   if (error instanceof ImportError) {
@@ -155,10 +158,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(400).send({ code: 'INVALID_INPUT', message: '图片地址无效', retryable: false });
     }
     try {
-      const result = await provider.imageByUrl(parsed.data.src);
+      const result = await provider.imageByUrl(parsed.data.src, parsed.data.w === '384' ? 384 : parsed.data.w === '768' ? 768 : undefined);
       return reply
         .type(result.contentType)
         .header('cache-control', 'public, max-age=604800, immutable')
+        .header('cdn-cache-control', 'public, max-age=604800, stale-while-revalidate=86400')
+        .header('vercel-cdn-cache-control', 'public, max-age=604800, stale-while-revalidate=86400')
         .send(Buffer.from(result.bytes));
     } catch (error) {
       return sendError(reply, error);

@@ -23,7 +23,7 @@ import type {
 } from './rows.js';
 
 export const DB_NAME = 'my-popmart';
-export const DB_SCHEMA_VERSION = 1;
+export const DB_SCHEMA_VERSION = 2;
 
 export interface SharedAccess {
   command<T>(name: SharedCommand, payload: unknown): Promise<T>;
@@ -57,7 +57,7 @@ export class PopmartDb extends Dexie {
 
   constructor(name = DB_NAME, options?: DexieOptions) {
     super(name, options);
-    this.version(DB_SCHEMA_VERSION).stores({
+    this.version(1).stores({
       datasets: 'id, status',
       appMeta: 'id',
       ips: '[datasetId+id], datasetId, &[datasetId+canonicalKey]',
@@ -77,6 +77,11 @@ export class PopmartDb extends Dexie {
       preferences: '[datasetId+id], datasetId, &[datasetId+key]',
       commandResults: '[datasetId+id], datasetId, &[datasetId+commandId]',
       counters: '[datasetId+id], datasetId',
+    });
+    // Style names/keys are unique within a series, not across the entire space.
+    // This only replaces an index; existing records and their IDs are preserved.
+    this.version(DB_SCHEMA_VERSION).stores({
+      styles: '[datasetId+id], datasetId, seriesId, [datasetId+seriesId], &[datasetId+seriesId+canonicalKey]',
     });
   }
 }

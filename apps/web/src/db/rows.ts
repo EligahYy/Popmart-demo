@@ -41,6 +41,8 @@ export interface IpRow extends RowBase {
 export type ProductKind = 'figure' | 'plush_pendant' | 'pop_bean' | 'accessory' | 'other';
 
 export interface SeriesRow extends RowBase {
+  /** Monotonic within a dataset, including re-imports; legacy rows may omit it. */
+  importOrder?: number;
   readonly ipId: string;
   readonly canonicalKey: string;
   displayName: string;

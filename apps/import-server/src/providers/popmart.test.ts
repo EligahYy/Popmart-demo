@@ -172,6 +172,27 @@ describe('preview token', () => {
 });
 
 describe('media', () => {
+  it('follows redirects between media hosts while rejecting redirects off the allowlist', async () => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => String(input).includes('/start.jpg')
+      ? new Response(null, { status: 302, headers: { location: 'https://global-static.popmart.com/final.jpg' } })
+      : new Response(new Uint8Array([1]), { headers: { 'content-type': 'image/jpeg' } }));
+    const { provider } = providerWith(fixture, { fetchImpl });
+    await expect(provider.imageByUrl('https://prod-global-biz.popmart.com/start.jpg')).resolves.toMatchObject({ contentType: 'image/jpeg' });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    fetchImpl.mockClear();
+    fetchImpl.mockImplementation(async () => new Response(null, { status: 302, headers: { location: 'https://evil.example.com/private.jpg' } }));
+    await expect(provider.imageByUrl('https://prod-global-biz.popmart.com/start.jpg')).rejects.toMatchObject({ code: 'UNSUPPORTED_SOURCE' });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not add OSS parameters to CDNs without verified support', async () => {
+    const fetchImpl = vi.fn(async (_input: string | URL | Request) => new Response(new Uint8Array([1]), { headers: { 'content-type': 'image/jpeg' } }));
+    const { provider } = providerWith(fixture, { fetchImpl });
+    const source = 'https://global-static.popmart.com/x.jpg';
+    await provider.imageByUrl(source, 384);
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(source);
+  });
+
   it('rejects an expired token', async () => {
     const { provider } = providerWith();
     const token = signToken(

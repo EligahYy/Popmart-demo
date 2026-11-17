@@ -5,7 +5,6 @@ import { fetchPreview, resolveLink, searchSeries } from '../../api/import.js';
 import { Sheet } from '../../components/Sheet.js';
 import { useRuntime } from '../../app/RuntimeProvider.js';
 import { commitSeriesImport } from '../../db/commands.js';
-import { cacheStyleImages } from '../../media/cache.js';
 import { describeError } from '../../db/errors.js';
 
 type Step = 'input' | 'candidates' | 'preview';
@@ -95,12 +94,6 @@ export function ImportFlow({ onClose, onImported }: { onClose: () => void; onImp
         seriesReferenceUnitCents: cents,
         priceProvenance: cents !== null ? 'user_confirmed' : null,
       });
-      void cacheStyleImages(
-        db,
-        datasetId,
-        Object.values(result.styleIds),
-        { concurrency: 2 },
-      );
       onImported(result.seriesId);
     } catch (reason) {
       setError(describeError(reason, '保存失败'));

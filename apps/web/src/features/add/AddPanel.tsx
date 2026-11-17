@@ -18,7 +18,6 @@ import { getSeriesViews, type SeriesView, type StyleWithHeld } from '../../db/qu
 import type { SeriesRow } from '../../db/rows.js';
 import { resolveReferenceUnitCents } from '../../domain/price.js';
 import { fetchPreview, resolveLink, searchSeries } from '../../api/import.js';
-import { cacheStyleImages } from '../../media/cache.js';
 
 type Source = 'official' | 'secondhand' | 'gift';
 type ImportStep = 'idle' | 'candidates' | 'preview';
@@ -45,6 +44,8 @@ export function AddPanel({
   const { db, datasetId, sharedVersion } = useRuntime();
   const [views, setViews] = useState<SeriesView[] | null>(null);
   const [activeSeriesId, setActiveSeriesId] = useState<string | null>(initialSeriesId ?? null);
+  const selectedSeries = useRef<string | null>(initialSeriesId ?? null);
+  const loadSequence = useRef(0);
   const [picked, setPicked] = useState<Map<string, number>>(new Map());
   const [orderOpen, setOrderOpen] = useState(false);
   const styleRowRef = useRef<HTMLDivElement | null>(null);
@@ -61,17 +62,21 @@ export function AddPanel({
   const [importError, setImportError] = useState<string | null>(null);
   const [importHint, setImportHint] = useState<string | null>(null);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (preferredId?: string) => {
+    if (preferredId) selectedSeries.current = preferredId;
+    const sequence = ++loadSequence.current;
     const next = await getSeriesViews(db, datasetId);
+    if (sequence !== loadSequence.current) return;
+    const selected = next.some((view) => view.series.id === selectedSeries.current)
+      ? selectedSeries.current : next[0]?.series.id ?? null;
+    selectedSeries.current = selected;
     setViews(next);
-    setActiveSeriesId((current) => {
-      if (current && next.some((view) => view.series.id === current)) return current;
-      return next[0]?.series.id ?? null;
-    });
+    setActiveSeriesId(selected);
   }, [db, datasetId, sharedVersion]);
 
   useEffect(() => {
     void reload();
+    return () => { loadSequence.current += 1; };
   }, [reload, refreshKey]);
 
   const activeSeries = useMemo(
@@ -112,6 +117,7 @@ export function AddPanel({
   }, [activeSeriesId]);
 
   function selectSeries(seriesId: string) {
+    selectedSeries.current = seriesId;
     setActiveSeriesId(seriesId);
     setOrderOpen(false);
   }
@@ -201,10 +207,8 @@ export function AddPanel({
         seriesReferenceUnitCents: cents,
         priceProvenance: cents !== null ? 'user_confirmed' : null,
       });
-      void cacheStyleImages(db, datasetId, Object.values(result.styleIds), { concurrency: 2 });
-      const next = await getSeriesViews(db, datasetId);
-      setViews(next);
-      setActiveSeriesId(result.seriesId);
+      await reload(result.seriesId);
+      setSeriesOpen(false);
       setImportStep('idle');
       setImportInput('');
       setPriceText('');
@@ -310,7 +314,10 @@ export function AddPanel({
           <div className="stack">
             {!orderOpen ? (
               <>
-                <h3 className="add-section-title">已有系列</h3>
+                <div className="add-section-heading">
+                  <h3 className="add-section-title">已有系列</h3>
+                  <span className="field__hint">最近导入优先</span>
+                </div>
                 <div className="series-picker">
                   <button
                     type="button"
@@ -356,7 +363,7 @@ export function AddPanel({
             {activeSeries && !orderOpen ? (
               <div className="style-scroll">
                 <div className="style-row" ref={styleRowRef} onScroll={updateStyleHint}>
-                  {activeSeries.styles.map((entry) => {
+                  {activeSeries.styles.map((entry, index) => {
                     const isPicked = picked.has(entry.style.id);
                     return (
                       <button
@@ -371,6 +378,7 @@ export function AddPanel({
                             url={entry.style.imageUrl}
                             assetId={entry.style.imageAssetId}
                             alt={entry.style.displayName}
+                            loading={index < 8 ? 'eager' : 'lazy'}
                           />
                           {entry.style.isSecret ? <span className="style-card__tag">隐藏</span> : null}
                           {entry.held > 0 ? <span className="style-card__held">×{entry.held}</span> : null}

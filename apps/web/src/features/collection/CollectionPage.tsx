@@ -195,6 +195,7 @@ function SeriesFan({
                 url={entry.style.imageUrl}
                 assetId={entry.style.imageAssetId}
                 alt={entry.style.displayName}
+                width={768}
               />
               {entry.held > 1 ? <span className="fan__count">×{entry.held}</span> : null}
             </button>
