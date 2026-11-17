@@ -31,6 +31,26 @@ pnpm --filter @my-popmart/import-server start
 3. 启动：`pnpm --filter @my-popmart/import-server start`
 4. 由平台或反向代理提供 **HTTPS**，并固定域名。
 
+## Vercel Services 部署
+
+仓库根目录的 `vercel.json` 声明了 Vite 前端和 Fastify 导入服务。Vercel 项目的
+Root Directory 应指向仓库根目录，使该配置和 pnpm workspace 都参与构建。
+`/api/*` 先转发到 `import-server`，保留原路径；其余请求交给 `web`。
+
+- 导入服务入口是 `apps/import-server/src/server.ts`，生产环境同样调用 `listen()`。
+  Vercel 的 Node 运行时会拦截该调用，获取 HTTP server。
+- Fastify 工厂放在 `src/buildApp.ts`，避免被自动发现逻辑误选为应用入口。
+  `server.ts` 保留来自 `fastify` 的类型导入，满足 Fastify 构建器的入口检测。
+- 在 Vercel 项目中设置固定的 `IMPORT_SIGNING_SECRET`，至少覆盖实际使用的
+  Production / Preview 环境。服务需要访问官方商品页、sitemap 和图片 CDN。
+- 部署后先请求 `GET /api/health`，确认返回 JSON，再测试商品链接导入。
+  若返回 HTML，检查项目根目录和 API 路由；若返回 5xx，查看导入服务 Runtime Logs。
+- 名称搜索仅覆盖本地别名库和加拿大站英文 sitemap，不是官方全量中文搜索。
+  上游不可达且没有别名结果时返回 `SOURCE_UNAVAILABLE`；真正无匹配才返回 `NO_MATCH`。
+
+参考：[Fastify on Vercel](https://vercel.com/docs/frameworks/backend/fastify)、
+[Service routing](https://vercel.com/docs/services/routing)。
+
 ## 为什么必须 HTTPS
 
 - Service Worker、PWA 安装、`crypto.randomUUID` 等能力要求安全上下文

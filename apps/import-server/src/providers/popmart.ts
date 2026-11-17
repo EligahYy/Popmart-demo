@@ -499,8 +499,9 @@ export function createPopmartProvider(options: ProviderOptions): PopmartProvider
             score: 50,
           });
         }
-      } catch {
-        // 站点不可达时只用别名库，保持可解释的 no_match
+      } catch (error) {
+        // 有别名结果时仍可降级；没有结果时保留上游故障，避免误报名称不存在。
+        if (results.size === 0) throw error;
       }
     }
 

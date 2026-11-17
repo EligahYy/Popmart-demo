@@ -3,7 +3,8 @@
   "services": {
     "import-server": {
       "root": "apps/import-server",
-      "framework": "fastify"
+      "framework": "fastify",
+      "entrypoint": "src/server.ts"
     },
     "web": {
       "root": "apps/web",

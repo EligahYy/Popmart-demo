@@ -135,6 +135,24 @@ describe('search', () => {
     const { provider } = providerWith('<html><body>empty sitemap</body></html>');
     await expect(provider.search('不存在的系列名')).rejects.toMatchObject({ code: 'NO_MATCH' });
   });
+
+  it('reports a source failure when sitemap is unavailable and no alias matches', async () => {
+    const { provider } = providerWith(fixture, {
+      fetchImpl: vi.fn(async () => { throw new Error('network down'); }),
+    });
+    await expect(provider.search('不存在的系列名')).rejects.toMatchObject({
+      code: 'SOURCE_UNAVAILABLE',
+      retryable: true,
+    });
+  });
+
+  it('keeps alias results when sitemap is unavailable', async () => {
+    const { provider } = providerWith(fixture, {
+      fetchImpl: vi.fn(async () => { throw new Error('network down'); }),
+    });
+    const results = await provider.search('好好生活');
+    expect(results[0]?.canonicalKey).toBe('popmart:ca:9120');
+  });
 });
 
 describe('preview token', () => {

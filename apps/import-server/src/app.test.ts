@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it, vi } from 'vitest';
-import { buildApp } from './app.js';
+import { buildApp } from './buildApp.js';
 
 const fixture = readFileSync(
   fileURLToPath(new URL('./providers/__fixtures__/popmart-product-9120.html', import.meta.url)),

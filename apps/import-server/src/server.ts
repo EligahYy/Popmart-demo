@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
-import { buildApp } from './app.js';
+import type { FastifyInstance } from 'fastify';
+import { buildApp } from './buildApp.js';
 
 const port = Number(process.env.PORT ?? 8787);
 const host = process.env.HOST ?? '127.0.0.1';
@@ -10,20 +11,11 @@ const aliasesPath = fileURLToPath(new URL('../data/aliases.zh.json', import.meta
 const staticDir =
   process.env.STATIC_DIR ?? fileURLToPath(new URL('../../web/dist', import.meta.url));
 
-const app = buildApp({ signingSecret, aliasesPath, logger: true, staticDir });
+const app: FastifyInstance = buildApp({ signingSecret, aliasesPath, logger: true, staticDir });
 
-// 关键：导出 Fastify 实例，供 Vercel 生成 Serverless Function
-export default app;
-
-// 本地开发时依然可以监听端口
-if (process.env.NODE_ENV !== 'production') {
-  app
-    .listen({ port, host })
-    .then(() => {
-      app.log.info(`import server listening on http://${host}:${port}`);
-    })
-    .catch((error: unknown) => {
-      app.log.error(error);
-      process.exit(1);
-    });
-}
+// Vercel 的 Fastify 运行时通过拦截 listen() 获取 Node HTTP server。
+// 生产环境也必须调用；导出 Fastify 实例不能替代这个启动步骤。
+app.listen({ port, host }).catch((error: unknown) => {
+  app.log.error(error);
+  process.exit(1);
+});
