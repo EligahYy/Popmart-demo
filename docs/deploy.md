@@ -43,6 +43,10 @@ Root Directory 应指向仓库根目录，使该配置和 pnpm workspace 都参�
   `server.ts` 保留来自 `fastify` 的类型导入，满足 Fastify 构建器的入口检测。
 - 在 Vercel 项目中设置固定的 `IMPORT_SIGNING_SECRET`，至少覆盖实际使用的
   Production / Preview 环境。服务需要访问官方商品页、sitemap 和图片 CDN。
+- `@fastify/static` 固定为 `8.3.0`（兼容 Fastify 5），并提交 pnpm lockfile。
+  已确认 `10.1.10` 通过 CommonJS `require()` 加载 ESM-only 的
+  `content-disposition@3.0.0`，在 Vercel 运行时触发 `ERR_REQUIRE_ESM`，
+  导致包括健康检查在内的所有 API 启动失败。`runtime.test.ts` 覆盖此兼容性。
 - 部署后先请求 `GET /api/health`，确认返回 JSON，再测试商品链接导入。
   若返回 HTML，检查项目根目录和 API 路由；若返回 5xx，查看导入服务 Runtime Logs。
 - 名称搜索仅覆盖本地别名库和加拿大站英文 sitemap，不是官方全量中文搜索。
