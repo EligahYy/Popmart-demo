@@ -8,7 +8,7 @@
       "outputDirectory": "dist",
       "functions": {
         "dist/server.js": {
-          "includeFiles": ["data/aliases.zh.json"]
+          "includeFiles": "data/aliases.zh.json"
         }
       }
     },
