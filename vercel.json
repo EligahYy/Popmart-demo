@@ -4,13 +4,14 @@
     "import-server": {
       "root": "apps/import-server",
       "framework": "fastify",
-      "entrypoint": "dist/server.js",
+      "entrypoint": "src/server.ts",
       "outputDirectory": "dist",
       "functions": {
         "dist/server.js": {
           "includeFiles": "data/aliases.zh.json"
         }
-      }
+      },
+      "buildCommand": "pnpm run build"
     },
     "web": {
       "root": "apps/web",
