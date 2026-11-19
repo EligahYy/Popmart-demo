@@ -1217,6 +1217,41 @@ button {
   gap: 8px;
 }
 
+.period-picker__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.period-picker__trigger[aria-expanded="true"] {
+  border-color: var(--color-accent);
+}
+.period-picker__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 6px;
+  padding: 8px;
+  max-height: min(32vh, 224px);
+  overflow-y: auto;
+  background: var(--color-surface-soft);
+  border-radius: 12px;
+}
+.period-picker__options button {
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.period-picker__options button[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: white;
+}
+
 .period-nav__label {
   min-height: 40px;
   padding: 0 14px;

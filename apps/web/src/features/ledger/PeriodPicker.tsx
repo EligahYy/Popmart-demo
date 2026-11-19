@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Sheet } from '../../components/Sheet.js';
 import { anchorToKey, keyToAnchor, type PeriodFilter } from '../../domain/ledger.js';
 
@@ -26,29 +26,47 @@ export function PeriodPicker({ filter, first, today, onPick, onClose }: {
     [String(y).padStart(4, '0'), String(m).padStart(2, '0'), String(d).padStart(2, '0')].join('-');
   const pick = (value: string) => onPick({ kind: filter.kind, anchor: keyToAnchor(filter.kind, anchorToKey(filter.kind, value)) });
 
+  const [open, setOpen] = useState<string | null>(null);
+  const optionsId = useId();
+  const trigger = useRef<HTMLButtonElement | null>(null);
+  const fields = [
+    { label: '年份', unit: '年', value: year, options: choices(firstYear, lastYear).reverse(), change: (y: number) => date(y, month, day) },
+    { label: '月份', unit: '月', value: month, options: months, change: (m: number) => date(year, m, day) },
+    { label: '周内日期', unit: '日', value: day, options: days, change: (d: number) => date(year, month, d) },
+  ].slice(0, filter.kind === 'week' ? 3 : filter.kind === 'month' ? 2 : 1);
+  const current = fields.find(field => field.label === open);
+
   return (
     <Sheet title="快捷选择时段" onClose={onClose}>
       <div className="stack">
         <div className="period-picker__fields">
-          <label className="field">
-            <span className="field__label">年份</span>
-            <select className="field__input" value={year} onChange={e => setDraft(date(Number(e.target.value), month, day))}>
-              {choices(firstYear, lastYear).reverse().map(y => <option key={y} value={y}>{y}年</option>)}
-            </select>
-          </label>
-          {filter.kind !== 'year' && <label className="field">
-            <span className="field__label">月份</span>
-            <select className="field__input" value={month} onChange={e => setDraft(date(year, Number(e.target.value), day))}>
-              {months.map(m => <option key={m} value={m}>{m}月</option>)}
-            </select>
-          </label>}
-          {filter.kind === 'week' && <label className="field">
-            <span className="field__label">周内日期</span>
-            <select className="field__input" value={day} onChange={e => setDraft(date(year, month, Number(e.target.value)))}>
-              {days.map(d => <option key={d} value={d}>{d}日</option>)}
-            </select>
-          </label>}
+          {fields.map(field => (
+            <div className="field" key={field.label}>
+              <span className="field__label">{field.label}</span>
+              <button type="button" className="field__input period-picker__trigger"
+                aria-label={`${field.label}，${field.value}${field.unit}`} aria-expanded={open === field.label}
+                aria-controls={open === field.label ? optionsId : undefined}
+                onClick={event => {
+                  trigger.current = event.currentTarget;
+                  setOpen(open === field.label ? null : field.label);
+                }}>
+                {field.value}{field.unit}<span aria-hidden="true">▾</span>
+              </button>
+            </div>
+          ))}
         </div>
+        {current && (
+          <div id={optionsId} className="period-picker__options" role="group" aria-label={`选择${current.label}`}>
+            {current.options.map(value => (
+              <button key={value} type="button" aria-pressed={value === current.value}
+                onClick={() => {
+                  setDraft(current.change(value));
+                  setOpen(null);
+                  trigger.current?.focus();
+                }}>{value}{current.unit}</button>
+            ))}
+          </div>
+        )}
         <button type="button" className="button" onClick={() => pick(date(year, month, day))}>查看统计</button>
         <button type="button" className="link-button" onClick={() => pick(today)}>
           {filter.kind === 'week' ? '回到本周' : filter.kind === 'month' ? '回到本月' : '回到今年'}
