@@ -112,7 +112,9 @@ export function HomePage({ refreshKey }: { refreshKey: number }) {
                 <span className="home-figure__zoom">
                   {greetingVideo ? (
                     <GreetingPlayer
+                      key={greetingVideo.url}
                       url={greetingVideo.url}
+                      posterUrl={restMedia.kind === 'image' ? restMedia.url : undefined}
                       playing={greetingActive}
                       onFinished={finishGreeting}
                     />

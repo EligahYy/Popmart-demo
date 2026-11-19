@@ -24,7 +24,7 @@
     "e2e:sheets": "node scripts/e2e-sheets.mjs",
     "e2e:visual": "node scripts/visual-check.mjs",
     "e2e:home-scene": "node scripts/e2e-home-scene.mjs",
-    "e2e:greeting": "node scripts/e2e-greeting-video.mjs"
+    "e2e:greeting": "pnpm --filter @my-popmart/import-server exec tsx ../web/scripts/e2e-greeting-video.ts"
   },
   "dependencies": {
     "@my-popmart/contracts": "workspace:*",
