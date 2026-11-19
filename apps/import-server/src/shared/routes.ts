@@ -35,15 +35,18 @@ export function registerSharedRoutes(app: FastifyInstance, store: SharedStore | 
     message: '共享数据库尚未配置。请在 Vercel 连接 Neon，确认 DATABASE_URL 环境变量后重新部署。',
   });
   app.addHook('onSend', async (request, reply, payload) => {
-    if (request.url.startsWith('/api/shared/')) reply.header('cache-control', 'no-store');
+    if (request.url.startsWith('/api/shared/') && !reply.hasHeader('cache-control')) reply.header('cache-control', 'no-store');
     return payload;
   });
   app.get('/api/shared/config', async () => ({ mode, configured: Boolean(store) }));
-  app.get<{ Querystring: { revision?: string } }>('/api/shared/state', async (request, reply) => {
+  app.get<{ Querystring: { revision?: string; instanceId?: string } }>('/api/shared/state', async (request, reply) => {
     if (!service) return unavailable(reply);
     try {
       const state = await service.read();
-      if (request.query.revision === String(state.revision)) return reply.code(204).send();
+      if (request.query.revision === String(state.revision) &&
+        (!request.query.instanceId || request.query.instanceId === state.snapshot.instanceId)) {
+        return reply.code(204).send();
+      }
       return reply.send(state);
     } catch (error) { return fail(reply, error); }
   });
@@ -88,7 +91,9 @@ export function registerSharedRoutes(app: FastifyInstance, store: SharedStore | 
       const part = z.coerce.number().int().min(0).max(59).parse(request.params.part);
       const item = await store.readMediaPart(id, part);
       if (!item) return reply.code(404).send({ code: 'MEDIA_NOT_FOUND', message: '云端素材不存在' });
-      return reply.type('application/octet-stream').send(Buffer.from(item.bytes, 'base64'));
+      return reply.header('cache-control', 'public, max-age=604800, immutable')
+        .header('vercel-cdn-cache-control', 'public, max-age=604800')
+        .type('application/octet-stream').send(Buffer.from(item.bytes, 'base64'));
     } catch (error) { return fail(reply, error); }
   });
 }

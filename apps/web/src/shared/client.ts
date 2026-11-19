@@ -30,7 +30,7 @@ export class SharedClient implements SharedAccess {
 
   private async request(path: string, init?: RequestInit): Promise<Response> {
     const response = await this.fetchImpl.call(globalThis, path, {
-      ...init, cache: 'no-store', signal: AbortSignal.timeout(30_000),
+      cache: 'no-store', ...init, signal: AbortSignal.timeout(30_000),
     });
     if (!response.ok) {
       const body = await response.json().catch(() => null) as { message?: string; code?: string } | null;
@@ -43,8 +43,10 @@ export class SharedClient implements SharedAccess {
     if (state.snapshot.instanceId === this.instanceId && state.revision <= this.revision) return;
     const snapshot = structuredClone(state.snapshot);
     // Keep locally cached official thumbnails; they are not authoritative cloud records.
-    for (const row of snapshot.tables.styles) {
-      const previous = await this.db.styles.get([String(row.datasetId), String(row.id)]);
+    const styles = snapshot.tables.styles;
+    const localStyles = await this.db.styles.bulkGet(styles.map(row => [String(row.datasetId), String(row.id)]));
+    for (const [index, row] of styles.entries()) {
+      const previous = localStyles[index];
       if (previous?.imageAssetId && previous.imageUrl === row.imageUrl &&
         await this.db.mediaBlobs.get([previous.datasetId, previous.imageAssetId])) {
         row.imageAssetId = previous.imageAssetId;
@@ -64,7 +66,19 @@ export class SharedClient implements SharedAccess {
   }
 
   private async synchronize(): Promise<void> {
-    const response = await this.request(`/api/shared/state?revision=${this.revision}`);
+    // The snapshot and its revision are committed together in IndexedDB.
+    // A returning visitor only needs the full snapshot when the space changed.
+    if (!this.instanceId) {
+      const cached = (await this.db.appMeta.get('control'))?.sharedCache;
+      if (cached) {
+        this.instanceId = cached.instanceId;
+        this.revision = cached.revision;
+        this.media = new Map(cached.media.map(item => [`${item.datasetId}:${item.id}`, item]));
+      }
+    }
+    const query = new URLSearchParams({ revision: String(this.revision) });
+    if (this.instanceId) query.set('instanceId', this.instanceId);
+    const response = await this.request(`/api/shared/state?${query}`);
     if (response.status !== 204) await this.accept(await response.json() as SharedState);
   }
 
@@ -134,7 +148,7 @@ export class SharedClient implements SharedAccess {
         while (!failed && nextPart < ref.parts) {
           const part = nextPart++;
           try {
-            parts[part] = await (await this.request(`/api/shared/media/${id}/${part}`)).arrayBuffer();
+            parts[part] = await (await this.request(`/api/shared/media/${id}/${part}`, { cache: 'default' })).arrayBuffer();
           } catch (error) {
             failed = true;
             throw error;
@@ -146,7 +160,8 @@ export class SharedClient implements SharedAccess {
       }
       const blob = new Blob(parts, { type: ref.mime });
       if (blob.size !== ref.bytes || await sha256Hex(await blob.arrayBuffer()) !== id) throw new Error('云端素材校验失败');
-      await this.db.mediaBlobs.put({ datasetId: ref.datasetId, id, blob });
+      // A full browser cache must not prevent displaying verified media.
+      await this.db.mediaBlobs.put({ datasetId: ref.datasetId, id, blob }).catch(() => undefined);
       return blob;
     })();
     this.mediaLoads.set(key, loading);

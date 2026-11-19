@@ -1,5 +1,5 @@
 /**
- * 从「左彩色 + 右蒙版」的打招呼视频提取第一帧，生成透明 PNG。
+ * 从「左彩色 + 右蒙版」的打招呼视频提取第一帧，生成透明封面。
  * 常态形象用它，点击播放时首帧与静态完全一致，衔接不会有跳变。
  */
 export async function createGreetingPoster(file: File): Promise<File> {
@@ -56,9 +56,9 @@ export async function createGreetingPoster(file: File): Promise<File> {
     ctx.putImageData(image, 0, 0);
 
     const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((value) => (value ? resolve(value) : reject(new Error('生成失败'))), 'image/png');
+      canvas.toBlob((value) => (value ? resolve(value) : reject(new Error('生成失败'))), 'image/webp', 0.93);
     });
-    return new File([blob], 'greeting-poster.png', { type: 'image/png' });
+    return new File([blob], blob.type === 'image/webp' ? 'greeting-poster.webp' : 'greeting-poster.png', { type: blob.type });
   } finally {
     URL.revokeObjectURL(url);
     video.remove();

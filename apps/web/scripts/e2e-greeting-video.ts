@@ -194,6 +194,21 @@ try {
   console.log('PASS: no rectangular touch highlight; keyboard focus remains visible');
   await context.close();
 
+  // A first-time visitor stays on home when the first poster download fails.
+  const cold = await browser.newContext({ isMobile: true, viewport: { width: 390, height: 844 } });
+  const home = await cold.newPage();
+  const posterId = (await store.read())!.snapshot.tables.assets.find(row => row.ownerId === 'greeting_poster' && row.status === 'ready')!.id;
+  let posterAttempts = 0;
+  await home.route(`**/api/shared/media/${posterId}/0`, route => ++posterAttempts === 1 ? route.abort() : route.continue());
+  await home.goto(base);
+  await home.waitForFunction(() => {
+    const image = document.querySelector<HTMLImageElement>('img.home-figure__poster');
+    return image?.complete && image.naturalWidth > 0;
+  });
+  assert.equal(posterAttempts, 2);
+  await cold.close();
+  console.log('PASS: a new device automatically recovers its portrait without leaving home');
+
   // Safari/older webviews may lack requestVideoFrameCallback. Exercise the
   // readiness-checked animation-frame path as a separate fresh visitor.
   const fallback = await browser.newContext({ viewport: { width: 430, height: 932 }, isMobile: true, hasTouch: true });
@@ -241,7 +256,10 @@ try {
   await older.getByRole('link', { name: '我的小窝', exact: true }).click();
   await idle(older);
   assert.equal(await older.locator(selector).getAttribute('src'), cachedUrl);
+  const revalidated = older.waitForResponse(response =>
+    response.url().includes('/api/shared/state?') && response.url().includes('instanceId=') && response.status() === 204);
   await older.reload();
+  await revalidated;
   await idle(older);
   assert.equal(mediaRequests, downloaded);
   console.log('PASS: video preloads off-home, keeps the poster through a queued tap, and is reused after navigation and reload');

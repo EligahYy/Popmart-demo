@@ -28,7 +28,7 @@ export function StyleImage({
       fetchPriority={loading === 'eager' ? 'high' : 'auto'}
       referrerPolicy="no-referrer"
       className={className}
-      onLoad={() => { if (src === optimized) void rememberThumbnail(src); }}
+      onLoad={() => { if (src === optimized && !navigator.serviceWorker?.controller) void rememberThumbnail(src); }}
       onError={() => setFailed((previous) => [...previous, src])}
     />
   );

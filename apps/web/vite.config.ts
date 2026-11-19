@@ -27,10 +27,19 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname === '/api/import/image',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'my-popmart-thumbnails-v1',
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 512, maxAgeSeconds: 604800 },
+            },
+          },
           {
             urlPattern: /\/api\/import\//,
             handler: 'NetworkOnly',

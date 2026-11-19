@@ -27,6 +27,7 @@ import {
   type PeriodKind,
 } from '../../domain/ledger.js';
 import { Sheet } from '../../components/Sheet.js';
+import { PeriodPicker } from './PeriodPicker.js';
 import { AcquisitionSheet } from './AcquisitionSheet.js';
 import { StyleImage } from '../../components/StyleImage.js';
 
@@ -55,6 +56,7 @@ export function LedgerPage({ refreshKey }: { refreshKey: number }) {
   const [ipId, setIpId] = useState<string>('all');
   const [metric, setMetric] = useState<Metric>('cents');
   const [budget, setBudgetLimitsState] = useState<BudgetLimits | null>(null);
+  const [periodOpen, setPeriodOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
@@ -229,33 +231,21 @@ export function LedgerPage({ refreshKey }: { refreshKey: number }) {
           ))}
         </div>
 
-        {summary.buckets.length > 1 ? (
-          <div className="period-nav">
-            <button
-              type="button"
-              className="fan__nav"
-              aria-label="上一个"
-              disabled={!canShiftBackward(filter, firstBoundaryDay)}
-              onClick={() => shift(-1)}
-            >
-              ‹
-            </button>
-            <span className="period-nav__label">{periodLabel(filter)}</span>
-            <button
-              type="button"
-              className="fan__nav"
-              aria-label="下一个"
-              disabled={!canShiftForward(filter, today)}
-              onClick={() => shift(1)}
-            >
-              ›
-            </button>
-          </div>
-        ) : (
-          <div className="period-nav">
-            <span className="period-nav__label">{periodLabel(filter)}</span>
-          </div>
-        )}
+        <div className="period-nav">
+          <button type="button" className="fan__nav" aria-label="上一个"
+            disabled={!canShiftBackward(filter, firstBoundaryDay)} onClick={() => shift(-1)}>‹</button>
+          <button type="button" className="period-nav__label" aria-haspopup="dialog"
+            aria-label={`快捷选择时段，当前${periodLabel(filter)}`} onClick={() => setPeriodOpen(true)}>
+            {periodLabel(filter)} <span aria-hidden="true">▾</span>
+          </button>
+          <button type="button" className="fan__nav" aria-label="下一个"
+            disabled={!canShiftForward(filter, today)} onClick={() => shift(1)}>›</button>
+        </div>
+        {periodOpen && <PeriodPicker filter={filter} first={firstBoundaryDay && firstBoundaryDay < today ? firstBoundaryDay : today}
+          today={today} onClose={() => setPeriodOpen(false)} onPick={next => {
+            setFilter(next);
+            setPeriodOpen(false);
+          }} />}
 
         <div className="period-figures">
           <button type="button" className="period-figure" onClick={jumpToDetail}>

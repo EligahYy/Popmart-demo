@@ -28,10 +28,14 @@ export function usePersonalMedia(role: PersonalRole, refreshKey: string, enabled
   }, [resolved]);
 
   useEffect(() => {
-    if (!enabled) return;
     let cancelled = false;
-    getPersonalAsset(db, datasetId, role)
-      .then(async (asset) => {
+    let retryTimer: number | undefined;
+    let retryDelay = 500;
+
+    async function load() {
+      let hasAsset = false;
+      try {
+        const asset = await getPersonalAsset(db, datasetId, role);
         if (cancelled) return;
         if (!asset) {
           current.current = null;
@@ -39,22 +43,36 @@ export function usePersonalMedia(role: PersonalRole, refreshKey: string, enabled
           setStatus({ scope, hasAsset: false, settled: true });
           return;
         }
-        if (current.current?.scope === scope && current.current.assetId === asset.assetId) return;
-        setStatus({ scope, hasAsset: true, settled: false });
-        const blob = await readPersonalBlob(db, datasetId, asset.assetId).catch(() => null);
+        hasAsset = true;
+        if (current.current?.scope === scope && current.current.assetId === asset.assetId) {
+          setStatus({ scope, hasAsset: true, settled: true });
+          return;
+        }
+        if (retryTimer === undefined) setStatus({ scope, hasAsset: true, settled: false });
+        // Discover the greeting immediately so a tap on the poster can queue
+        // playback while the shell gives the smaller poster download priority.
+        if (!enabled) return;
+        const blob = await readPersonalBlob(db, datasetId, asset.assetId);
         if (cancelled) return;
-        setStatus({ scope, hasAsset: true, settled: true });
-        if (!blob) return;
+        if (!blob) throw new Error('素材暂时不可用');
         const next = { scope, assetId: asset.assetId, media: { url: URL.createObjectURL(blob), kind: asset.kind } };
         current.current = next;
         setResolved(next);
-      })
-      .catch(() => {
-        if (!cancelled) setStatus({ scope, hasAsset: false, settled: true });
-      });
+        setStatus({ scope, hasAsset: true, settled: true });
+      } catch {
+        if (cancelled) return;
+        setStatus({ scope, hasAsset, settled: true });
+        if (db.shared) {
+          retryTimer = window.setTimeout(load, retryDelay);
+          retryDelay = Math.min(30_000, retryDelay * 2);
+        }
+      }
+    }
+    void load();
 
     return () => {
       cancelled = true;
+      window.clearTimeout(retryTimer);
     };
   }, [db, datasetId, sharedVersion, role, refreshKey, scope, enabled]);
 

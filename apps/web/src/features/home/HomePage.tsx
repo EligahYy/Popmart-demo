@@ -163,7 +163,7 @@ export function HomePage({ refreshKey, restMedia, greeting: greetingAsset, showP
         <>
           <h2 className="home-section-title">我的 IP</h2>
           <section className="ip-grid" aria-label="已拥有的 IP">
-            {views.map((view) => (
+            {views.map((view, index) => (
               <Link key={view.ip.id} to={`/ip/${view.ip.id}`} className="ip-card">
                 <div className="ip-card__media">
                   <StyleImage
@@ -171,6 +171,7 @@ export function HomePage({ refreshKey, restMedia, greeting: greetingAsset, showP
                     assetId={covers.get(view.ip.id)?.assetId ?? view.coverAssetId}
                     alt={view.ip.displayName}
                     placeholder="暂无图片"
+                    loading={index < 2 ? 'eager' : 'lazy'}
                     width={768}
                   />
                   <span className="ip-card__count">{view.heldTotal}</span>

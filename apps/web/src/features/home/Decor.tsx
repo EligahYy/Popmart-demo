@@ -38,13 +38,13 @@ export function Cloud({ className }: { className?: string }) {
   );
 }
 
-import twinkle from '../../assets/ips/twinkle.png';
-import crybaby from '../../assets/ips/crybaby.png';
-import nyota from '../../assets/ips/nyota.png';
-import zsiga from '../../assets/ips/zsiga.png';
-import dimoo from '../../assets/ips/dimoo.png';
-import hirono from '../../assets/ips/hirono.png';
-import shelfImage from '../../assets/shelf3d.png';
+import twinkle from '../../assets/ips/twinkle.webp';
+import crybaby from '../../assets/ips/crybaby.webp';
+import nyota from '../../assets/ips/nyota.webp';
+import zsiga from '../../assets/ips/zsiga.webp';
+import dimoo from '../../assets/ips/dimoo.webp';
+import hirono from '../../assets/ips/hirono.webp';
+import shelfImage from '../../assets/shelf3d.webp';
 
 const IPS = [
   { key: 'twinkle', src: twinkle },

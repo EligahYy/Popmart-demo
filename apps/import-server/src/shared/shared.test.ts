@@ -72,6 +72,24 @@ describe('shared cloud API and independent browser caches', () => {
     expect(store.state?.snapshot.tables.acquisitions).toEqual([]);
   });
 
+  it('revalidates only matching snapshots and can display media when local storage is full', async () => {
+    const { fetchImpl } = server();
+    const a = await client(fetchImpl);
+    const file = new File(['portrait'], 'avatar.webp', { type: 'image/webp' });
+    const { hash } = await savePersonalAsset(a.db, a.datasetId, file);
+    const cached = (await a.db.appMeta.get('control'))!.sharedCache!;
+    const stateUrl = `/api/shared/state?revision=${cached.revision}&instanceId=`;
+    expect((await fetchImpl(stateUrl + cached.instanceId)).status).toBe(204);
+    const replaced = await fetchImpl(stateUrl + crypto.randomUUID());
+    expect(replaced.status).toBe(200);
+    expect(replaced.headers.get('cache-control')).toBe('no-store');
+    const partUrl = `/api/shared/media/${hash}/`;
+    expect((await fetchImpl(partUrl + '0')).headers.get('cache-control')).toContain('immutable');
+    expect((await fetchImpl(partUrl + '1')).headers.get('cache-control')).toBe('no-store');
+    vi.spyOn(a.db.mediaBlobs, 'put').mockRejectedValueOnce(new DOMException('Full', 'QuotaExceededError'));
+    expect(await (await a.db.shared!.readMedia(hash))?.text()).toBe('portrait');
+  });
+
   it('persists a name across clients and new server instances', async () => {
     const {fetchImpl, store} = server();
     const a = await client(fetchImpl);

@@ -17,6 +17,8 @@ export function useStyleImage(
     let cancelled = false;
     let objectUrl: string | null = null;
     const load = async () => {
+      // The service worker serves these images directly from the same cache.
+      if (!assetId && navigator.serviceWorker?.controller) return;
       const thumbnail = fallback ? await readThumbnail(fallback) : null;
       const row = !thumbnail && assetId ? await db.mediaBlobs.get([datasetId, assetId]) : null;
       const blob = thumbnail ?? row?.blob ?? (assetId && db.shared ? await db.shared.readMedia(assetId) : null);
