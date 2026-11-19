@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Route, Routes } from 'react-router-dom';
+import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { RuntimeProvider, useRuntime } from './app/RuntimeProvider.js';
 import { ErrorBoundary } from './app/ErrorBoundary.js';
 import { AddPanel } from './features/add/AddPanel.js';
@@ -8,6 +8,7 @@ import { HomePage } from './features/home/HomePage.js';
 import { LedgerPage } from './features/ledger/LedgerPage.js';
 import { SettingsPage } from './features/settings/SettingsPage.js';
 import { applyUpdate } from './app/pwa.js';
+import { usePersonalMedia } from './media/usePersonalMedia.js';
 
 function NotFoundPage() {
   return (
@@ -26,6 +27,13 @@ function Shell() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [updateReady, setUpdateReady] = useState(false);
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  const { key: locationKey } = useLocation();
+  // A route change also picks up uploads made in local mode. Loaded URLs stay
+  // in the shell, so returning home does not rebuild the media from storage.
+  const mediaRefresh = `${db.shared ? '' : locationKey}:${online}`;
+  const poster = usePersonalMedia('greetingPoster', mediaRefresh);
+  const idle = usePersonalMedia('idle', mediaRefresh);
+  const greeting = usePersonalMedia('greeting', mediaRefresh, poster.settled);
 
   useEffect(() => {
     const connection = (event: Event) => setSharedConnected((event as CustomEvent<boolean>).detail);
@@ -79,7 +87,13 @@ function Shell() {
       <Routes>
         <Route
           path="/"
-          element={<HomePage refreshKey={refreshKey} />}
+          element={<HomePage
+            refreshKey={refreshKey}
+            restMedia={poster.media ?? idle.media}
+            greeting={greeting}
+            showPlaceholder={poster.settled && idle.settled && greeting.settled &&
+              !poster.hasAsset && !idle.hasAsset && !greeting.hasAsset}
+          />}
         />
         <Route path="/ip/:ipId" element={<CollectionPage />} />
         <Route path="/ledger" element={<LedgerPage refreshKey={refreshKey} />} />

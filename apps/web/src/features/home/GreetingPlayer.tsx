@@ -6,7 +6,7 @@ const RETURN_MS = 200;
 
 /** Reveal animation only after an actual decoded frame has been composited. */
 export function GreetingPlayer({ url, posterUrl, playing, onFinished }: {
-  url: string;
+  url?: string;
   posterUrl?: string;
   playing: boolean;
   onFinished: () => void;
@@ -20,10 +20,10 @@ export function GreetingPlayer({ url, posterUrl, playing, onFinished }: {
   onFinishedRef.current = onFinished;
 
   useEffect(() => {
+    setVisibleUrl(null);
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const poster = posterRef.current;
-    if (!video || !canvas) return;
+    if (!url || !video || !canvas) return;
     let renderer: GreetingRenderer | null = null;
     try { renderer = createGreetingRenderer(canvas); } catch { /* Keep the poster. */ }
     let disposed = false;
@@ -32,6 +32,7 @@ export function GreetingPlayer({ url, posterUrl, playing, onFinished }: {
     let frame: number | null = null;
     let resetTimer: number | undefined;
     let capturedPoster = false;
+    let revealed = false;
     const hasVideoFrames = typeof video.requestVideoFrameCallback === 'function';
 
     const cancelFrame = () => {
@@ -43,6 +44,7 @@ export function GreetingPlayer({ url, posterUrl, playing, onFinished }: {
     const draw = () => {
       try {
         if (!renderer?.draw(video)) return false;
+        const poster = posterRef.current;
         if (!capturedPoster && poster) {
           poster.getContext('2d')?.drawImage(canvas, 0, 0);
           capturedPoster = true;
@@ -55,13 +57,17 @@ export function GreetingPlayer({ url, posterUrl, playing, onFinished }: {
       const tick = () => {
         frame = null;
         if (disposed || !requested) return;
-        if (draw()) setVisibleUrl(url);
+        if (!video.paused && !video.ended && draw() && !revealed) {
+          revealed = true;
+          setVisibleUrl(url);
+        }
         schedule();
       };
       frame = hasVideoFrames ? video.requestVideoFrameCallback(tick) : requestAnimationFrame(tick);
     };
     const stop = (notify = false) => {
       requested = false;
+      revealed = false;
       run += 1;
       cancelFrame();
       video.pause();
@@ -104,7 +110,7 @@ export function GreetingPlayer({ url, posterUrl, playing, onFinished }: {
       renderer?.dispose();
       try { renderer = createGreetingRenderer(canvas); prepare(); } catch { renderer = null; }
     };
-    controllerRef.current = { start, stop: () => stop() };
+    controllerRef.current = { start, stop: () => { if (requested) stop(); } };
     video.addEventListener('loadeddata', prepare);
     video.addEventListener('seeked', prepare);
     video.addEventListener('ended', ended);
@@ -138,14 +144,15 @@ export function GreetingPlayer({ url, posterUrl, playing, onFinished }: {
   }, [playing, url]);
 
   return (
-    <span className={`home-figure__greeting${visibleUrl === url ? ' home-figure__greeting--active' : ''}`}>
+    <span className={`home-figure__greeting${url && visibleUrl === url ? ' home-figure__greeting--active' : ''}`}>
       {posterUrl ? (
         <img className="home-figure__poster" src={posterUrl} alt="我的形象" draggable={false} />
       ) : (
         <canvas ref={posterRef} className="home-figure__poster" width={432} height={576} aria-hidden="true" />
       )}
-      <canvas ref={canvasRef} className="home-figure__canvas" width={432} height={576} aria-hidden="true" />
-      <video
+      {url ? <canvas key={`canvas:${url}`} ref={canvasRef} className="home-figure__canvas" width={432} height={576} aria-hidden="true" /> : null}
+      {url ? <video
+        key={url}
         ref={videoRef}
         className="home-figure__hidden-video"
         src={url}
@@ -155,7 +162,7 @@ export function GreetingPlayer({ url, posterUrl, playing, onFinished }: {
         preload="auto"
         tabIndex={-1}
         aria-hidden="true"
-      />
+      /> : null}
     </span>
   );
 }

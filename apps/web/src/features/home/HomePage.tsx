@@ -3,12 +3,17 @@ import { Link, NavLink } from 'react-router-dom';
 import { useRuntime } from '../../app/RuntimeProvider.js';
 import { getOwnedIps, getSpaceName, type OwnedIpView } from '../../db/queries.js';
 import { StyleImage } from '../../components/StyleImage.js';
-import { usePersonalMedia } from '../../media/usePersonalMedia.js';
+import type { PersonalMedia } from '../../media/usePersonalMedia.js';
 import { chooseCover, sessionSeed } from '../../domain/ipCover.js';
 import { Cloud, Flower, Shelf } from './Decor.js';
 import { GreetingPlayer } from './GreetingPlayer.js';
 
-export function HomePage({ refreshKey }: { refreshKey: number }) {
+export function HomePage({ refreshKey, restMedia, greeting: greetingAsset, showPlaceholder }: {
+  refreshKey: number;
+  restMedia: PersonalMedia | null;
+  greeting: { media: PersonalMedia | null; hasAsset: boolean };
+  showPlaceholder: boolean;
+}) {
   const { db, datasetId, sharedVersion } = useRuntime();
   const [views, setViews] = useState<OwnedIpView[] | null>(null);
   const [spaceName, setSpaceName] = useState('红彤彤收纳');
@@ -16,10 +21,7 @@ export function HomePage({ refreshKey }: { refreshKey: number }) {
   const [showInstallHint, setShowInstallHint] = useState(
     () => localStorage.getItem('mp-install-dismissed') !== '1',
   );
-  const idleMedia = usePersonalMedia('idle', refreshKey);
-  const greetingPoster = usePersonalMedia('greetingPoster', refreshKey);
-  const greetingVideo = usePersonalMedia('greeting', refreshKey);
-  const restMedia = greetingPoster ?? idleMedia;
+  const greetingVideo = greetingAsset.media;
   const [greetingActive, setGreetingActive] = useState(false);
   const finishGreeting = useCallback(() => setGreetingActive(false), []);
 
@@ -98,43 +100,38 @@ export function HomePage({ refreshKey }: { refreshKey: number }) {
           <Shelf className="home-scene__shelf" />
           <div className="home-scene__veil" aria-hidden="true" />
 
-          {restMedia ? (
+          {restMedia || greetingVideo ? (
             <button
               type="button"
               className="home-figure"
               onClick={() => {
                 setGreeting(true);
-                if (greetingVideo) setGreetingActive(true);
+                if (greetingAsset.hasAsset) setGreetingActive(true);
               }}
               aria-label="和我的形象打招呼"
             >
               <span className="home-figure__frame">
                 <span className="home-figure__zoom">
-                  {greetingVideo ? (
+                  {greetingVideo || restMedia?.kind === 'image' ? (
                     <GreetingPlayer
-                      key={greetingVideo.url}
-                      url={greetingVideo.url}
-                      posterUrl={restMedia.kind === 'image' ? restMedia.url : undefined}
+                      url={greetingVideo?.url}
+                      posterUrl={restMedia?.kind === 'image' ? restMedia.url : undefined}
                       playing={greetingActive}
                       onFinished={finishGreeting}
                     />
                   ) : restMedia ? (
-                    restMedia.kind === 'video' ? (
-                      <video className="home-figure__media" src={restMedia.url} autoPlay muted loop playsInline />
-                    ) : (
-                      <img className="home-figure__media" src={restMedia.url} alt="我的形象" />
-                    )
+                    <video className="home-figure__media" src={restMedia.url} autoPlay muted loop playsInline />
                   ) : null}
                 </span>
               </span>
             </button>
-          ) : (
+          ) : showPlaceholder ? (
             <div className="home-figure-placeholder">
               在设置里
               <br />
               放上你的形象
             </div>
-          )}
+          ) : null}
         </div>
       </section>
 

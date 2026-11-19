@@ -2707,7 +2707,6 @@ button {
   height: 100%;
   object-fit: contain;
   pointer-events: none;
-  transition: opacity 180ms ease;
 }
 
 .home-figure__greeting .home-figure__poster { opacity: 1; }
@@ -2715,9 +2714,15 @@ button {
 .home-figure__greeting--active .home-figure__poster { opacity: 0; }
 .home-figure__greeting--active .home-figure__canvas { opacity: 1; }
 
-@media (prefers-reduced-motion: reduce) {
-  .home-figure__greeting .home-figure__poster,
-  .home-figure__greeting .home-figure__canvas { transition: none; }
+/* A normal opacity crossfade lets the scene show through both layers in
+   the middle, even where both frames are opaque. Add their premultiplied
+   colours inside the isolated group to keep that area fully covered. */
+@supports (mix-blend-mode: plus-lighter) {
+  @media (prefers-reduced-motion: no-preference) {
+    .home-figure__greeting .home-figure__poster,
+    .home-figure__greeting .home-figure__canvas { transition: opacity 180ms ease; }
+    .home-figure__greeting .home-figure__canvas { mix-blend-mode: plus-lighter; }
+  }
 }
 
 /* 新增面板：顶部常驻搜索框 + 系列下拉 */

@@ -6,6 +6,8 @@ import type { PopmartDb, SharedAccess } from '../db/database.js';
 import { sha256Hex } from '../media/hash.js';
 import { applySnapshot } from './snapshot.js';
 
+const MEDIA_DOWNLOAD_CONCURRENCY = 3;
+
 export class SharedClient implements SharedAccess {
   private revision = 0;
   private instanceId: string | undefined;
@@ -125,9 +127,22 @@ export class SharedClient implements SharedAccess {
     if (!ref) return null;
     if (this.mediaLoads.has(key)) return this.mediaLoads.get(key) ?? null;
     const loading = (async () => {
-      const parts: ArrayBuffer[] = [];
-      for (let part = 0; part < ref.parts; part++) {
-        parts.push(await (await this.request(`/api/shared/media/${id}/${part}`)).arrayBuffer());
+      const parts = new Array<ArrayBuffer>(ref.parts);
+      let nextPart = 0;
+      let failed = false;
+      const downloads = await Promise.allSettled(Array.from({ length: Math.min(ref.parts, MEDIA_DOWNLOAD_CONCURRENCY) }, async () => {
+        while (!failed && nextPart < ref.parts) {
+          const part = nextPart++;
+          try {
+            parts[part] = await (await this.request(`/api/shared/media/${id}/${part}`)).arrayBuffer();
+          } catch (error) {
+            failed = true;
+            throw error;
+          }
+        }
+      }));
+      for (const download of downloads) {
+        if (download.status === 'rejected') throw download.reason;
       }
       const blob = new Blob(parts, { type: ref.mime });
       if (blob.size !== ref.bytes || await sha256Hex(await blob.arrayBuffer()) !== id) throw new Error('云端素材校验失败');

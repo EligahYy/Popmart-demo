@@ -7,13 +7,18 @@ export interface PersonalMedia {
   readonly kind: PersonalKind;
 }
 
-/**
- * 优先读取本机缓存；共享模式下按需读取云端素材。
- */
-export function usePersonalMedia(role: PersonalRole, refreshKey = 0): PersonalMedia | null {
+interface MediaStatus {
+  readonly scope: string;
+  readonly hasAsset: boolean;
+  readonly settled: boolean;
+}
+
+/** Load media in the app shell so the object URL survives route changes. */
+export function usePersonalMedia(role: PersonalRole, refreshKey: string, enabled = true) {
   const { db, datasetId, sharedVersion } = useRuntime();
   const scope = JSON.stringify([db.name, datasetId, role]);
   const [resolved, setResolved] = useState<{ scope: string; assetId: string; media: PersonalMedia } | null>(null);
+  const [status, setStatus] = useState<MediaStatus | null>(null);
   const current = useRef(resolved);
 
   // Unrelated cloud edits must retain the URL and its video decoder. Dispose
@@ -23,6 +28,7 @@ export function usePersonalMedia(role: PersonalRole, refreshKey = 0): PersonalMe
   }, [resolved]);
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     getPersonalAsset(db, datasetId, role)
       .then(async (asset) => {
@@ -30,23 +36,31 @@ export function usePersonalMedia(role: PersonalRole, refreshKey = 0): PersonalMe
         if (!asset) {
           current.current = null;
           setResolved(null);
+          setStatus({ scope, hasAsset: false, settled: true });
           return;
         }
         if (current.current?.scope === scope && current.current.assetId === asset.assetId) return;
-        const blob = await readPersonalBlob(db, datasetId, asset.assetId);
-        if (!blob || cancelled) return;
+        setStatus({ scope, hasAsset: true, settled: false });
+        const blob = await readPersonalBlob(db, datasetId, asset.assetId).catch(() => null);
+        if (cancelled) return;
+        setStatus({ scope, hasAsset: true, settled: true });
+        if (!blob) return;
         const next = { scope, assetId: asset.assetId, media: { url: URL.createObjectURL(blob), kind: asset.kind } };
         current.current = next;
         setResolved(next);
       })
       .catch(() => {
-        /* 读取失败时保持占位 */
+        if (!cancelled) setStatus({ scope, hasAsset: false, settled: true });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [db, datasetId, sharedVersion, role, refreshKey, scope]);
+  }, [db, datasetId, sharedVersion, role, refreshKey, scope, enabled]);
 
-  return resolved?.scope === scope ? resolved.media : null;
+  return {
+    media: resolved?.scope === scope ? resolved.media : null,
+    hasAsset: status?.scope === scope && status.hasAsset,
+    settled: status?.scope === scope && status.settled,
+  };
 }

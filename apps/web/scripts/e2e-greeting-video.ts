@@ -44,6 +44,70 @@ async function active(page: Page) {
     return video && !video.paused && video.currentTime > 0.2 && canvas && getComputedStyle(canvas).opacity === '1';
   });
 }
+
+// Sample painted pixels with both layers halfway through the transition.
+// The same opaque colour on both layers must not lighten over a white scene.
+async function verifyBlend(page: Page) {
+  await page.evaluate(() => {
+    const group = document.createElement('div');
+    group.id = 'blend-check';
+    group.className = 'home-figure__greeting';
+    group.style.cssText = 'position:fixed;left:0;top:0;width:32px;height:32px;z-index:9999';
+    const backdrop = document.createElement('div');
+    backdrop.style.cssText = 'position:fixed;inset:0;background:white;z-index:9998';
+    backdrop.id = 'blend-backdrop';
+    for (const name of ['home-figure__poster', 'home-figure__canvas']) {
+      const layer = document.createElement('canvas');
+      layer.className = name;
+      layer.width = layer.height = 32;
+      const context = layer.getContext('2d')!;
+      context.fillStyle = 'rgb(32, 48, 64)';
+      context.fillRect(8, 8, 16, 16);
+      group.append(layer);
+    }
+    document.body.append(backdrop, group);
+    group.getBoundingClientRect();
+  });
+  for (const entering of [true, false]) {
+    const opacities = await page.evaluate(async (on) => {
+      const group = document.querySelector('#blend-check')!;
+      group.classList.toggle('home-figure__greeting--active', on);
+      getComputedStyle(group.lastElementChild!).opacity;
+      await Promise.all(group.getAnimations({ subtree: true }).map(async animation => {
+        animation.pause();
+        await animation.ready;
+        animation.currentTime = 90;
+      }));
+      return [...group.children].map(layer => Number(getComputedStyle(layer).opacity));
+    }, entering);
+    assert(opacities.every(opacity => opacity > 0 && opacity < 1), JSON.stringify(opacities));
+    const shot = await page.screenshot({ clip: { x: 0, y: 0, width: 32, height: 32 } });
+    const pixels = await page.evaluate(async (png) => {
+      const bitmap = new Image();
+      bitmap.src = `data:image/png;base64,${png}`;
+      await bitmap.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(bitmap, 0, 0);
+      return [
+        [...context.getImageData(bitmap.width / 2, bitmap.height / 2, 1, 1).data],
+        [...context.getImageData(1, 1, 1, 1).data],
+      ];
+    }, shot.toString('base64'));
+    assert(pixels[0]!.every((channel, index) => Math.abs(channel - [32, 48, 64, 255][index]!) <= 2), JSON.stringify(pixels));
+    assert.deepEqual(pixels[1], [255, 255, 255, 255]);
+    await page.evaluate(() => {
+      for (const animation of document.querySelector('#blend-check')!.getAnimations({ subtree: true })) animation.finish();
+    });
+  }
+  await page.evaluate(() => {
+    document.querySelector('#blend-check')?.remove();
+    document.querySelector('#blend-backdrop')?.remove();
+  });
+  console.log('PASS: painted transition pixels stay opaque on the character and transparent around it');
+}
 try {
   const context = await browser.newContext({ viewport: { width: 430, height: 932 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
@@ -66,6 +130,7 @@ try {
   await page.getByRole('link', { name: '我的小窝', exact: true }).click();
   await page.locator('img.home-figure__poster').waitFor();
   await idle(page);
+  await verifyBlend(page);
   const touch = await page.locator('.home-figure').evaluate(button => ({
     highlight: getComputedStyle(button).getPropertyValue('-webkit-tap-highlight-color'),
     appearance: getComputedStyle(button).appearance,
@@ -137,9 +202,49 @@ try {
   });
   const older = await fallback.newPage();
   older.on('pageerror', error => errors.push(error.message));
-  await older.goto(base);
-  await older.locator('img.home-figure__poster').waitFor();
+  const greetingId = (await store.read())!.snapshot.tables.assets.find(row => row.ownerId === 'greeting' && row.status === 'ready')!.id;
+  const mediaPattern = `**/api/shared/media/${greetingId}/*`;
+  let releaseVideo!: () => void;
+  let notifyDownload!: () => void;
+  const pendingVideo = new Promise<void>(resolve => { releaseVideo = resolve; });
+  const downloadStarted = new Promise<void>(resolve => { notifyDownload = resolve; });
+  let mediaRequests = 0;
+  await older.route(mediaPattern, async route => {
+    mediaRequests += 1;
+    notifyDownload();
+    await pendingVideo;
+    await route.continue();
+  });
+  await older.goto(`${base}/ledger`);
+  try {
+    const timeout = AbortSignal.timeout(10000);
+    await Promise.race([downloadStarted, new Promise<never>((_, reject) => {
+      timeout.addEventListener('abort', () => reject(new Error('Video preloading did not start on the ledger')));
+    })]);
+    assert.equal(await older.locator(selector).count(), 0);
+    await older.getByRole('link', { name: '我的小窝', exact: true }).click();
+    await older.waitForFunction(() => {
+      const image = document.querySelector<HTMLImageElement>('img.home-figure__poster');
+      return image?.complete && image.naturalWidth > 0;
+    });
+    const poster = await older.locator('img.home-figure__poster').elementHandle();
+    assert.equal(await older.locator(selector).count(), 0);
+    await older.locator('.home-figure').tap();
+    releaseVideo();
+    await active(older);
+    assert(await poster!.evaluate(node => node === document.querySelector('img.home-figure__poster')));
+    await idle(older);
+  } finally { releaseVideo(); }
+  const cachedUrl = await older.locator(selector).getAttribute('src');
+  const downloaded = mediaRequests;
+  await older.getByRole('link', { name: '捂一下钱包？', exact: true }).click();
+  await older.getByRole('link', { name: '我的小窝', exact: true }).click();
   await idle(older);
+  assert.equal(await older.locator(selector).getAttribute('src'), cachedUrl);
+  await older.reload();
+  await idle(older);
+  assert.equal(mediaRequests, downloaded);
+  console.log('PASS: video preloads off-home, keeps the poster through a queued tap, and is reused after navigation and reload');
   await older.locator('.home-figure').tap();
   await active(older);
   await idle(older);
